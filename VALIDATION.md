@@ -1,5 +1,76 @@
 # 拆分驗證（2026-11-16）
 
+> 本文件保留各階段當時的驗證與未發布狀態；最新 Git／商店狀態以發行 PR 與商店後台為準。私人交接與校驗回條另存，不納入公開套件。
+
+## 1.12.2 朗讀圖示與共用設定浮層（2026-11-23）
+
+- 先依使用者指示記錄docs/UI_INVENTORY.md，再將原文／譯文下方文字朗讀鈕改為區塊右上喇叭SVG與齒輪，語言／語速共用同一個原生Popover表單，保持daisyUI與可存取名稱／播放狀態。沒有變更語音服務、來源、權限或剪貼簿。
+- speech-settings.js管理兩個入口、定位與視窗邊界、aria-expanded、Enter／Space、Esc焦點還原、點外部／Tab收起、scroll／resize與清理。ocr.js在浮層開啟時不讓Escape取消圖片文字草稿。
+- npm test **158/158**、npm run check、git diff --check通過；沒有build／monitor scripts。
+- 隔離Edge **44項朗讀／UI＋48項並行＋32項複製＝124項**通過，無應用程式例外。包含真實Audio與固定測試句Hello PageKit之Google TTS、真正封裝Tesseract；SpeechSynthesis／Chrome APIs／翻譯／剪貼簿是受控替身，不宣稱人工聽驗所有語言、日常Chrome或真實OS剪貼簿。
+- 新UI核對喇叭純SVG、右上且不遮字、title／aria、共享設定值、焦點、鍵盤、外部收起、Esc保留草稿、320px浮層上下左右均留在視窗、深淺色。已目視畫面；原播放／停止／備援／長文／語速／改字／失效／關閉回歸通過。
+- QA在output/playwright/ocr-speech-1.12.2.mjs、ocr-parallel-1.12.2.mjs、copy-shortcut-1.12.2.mjs與同名results.json／PNG，皆忽略檔。外部點擊測試改點未被浮層遮住的區域，沒有用force代替原生點擊。
+- 版本1.12.2與README／AGENTS／注入版本／資源檢查同步。未commit／push／商店發布或日常Chrome重新載入，全部前輪修改與stash保留。交接紀錄已另存並讀回確認。
+
+## 1.12.1 縮放工具列80%試版（2026-11-23）
+
+- 依使用者圖中指定縮放群組整體縮小20%，只改.zoom-controls變換比例與原點；字體／按鈕／間距／外框一起變80%，底部置中及16px底距保持，沒有改圖片或其他編輯器UI。規格先記錄docs/UI_INVENTORY.md。
+- npm test **158/158**、npm run check、git diff --check通過。隔離Edge **42項**縮放／手掌／深淺色／650與320px回歸通過。使用未變換的版面尺寸對照實際顯示矩形，253.734×50→202.988×40px，寬高比均80%；底部位置、按鈕點擊／文字完整、Ctrl滾輪錨點、手掌／握拳正常。
+- 已目視縮小後深淺色；QA output/playwright/zoom-compact-1.12.1.mjs及同名資料夾results.json／PNG。Chrome APIs／OCR／剪貼簿為替身，沒有日常Chrome或真實OS剪貼簿驗收。本輪純CSS小調整，不寫鏡像單元測試，不重跑未改的完整模型／朗讀矩陣。
+- 版本1.12.1、README changelog及注入識別同步；保留全部前輪修改，未commit／push／發布或日常Chrome重新載入。交接紀錄已另存並讀回確認。
+
+## 1.12.0 圖片區Ctrl+C／Cmd+C（2026-11-23）
+
+- 使用者明確指定焦點／選取物件優先；先記錄docs/UI_INVENTORY.md，再新增image-copy-shortcut.js。僅圖片可視區hover且無文字選取、其他控制項焦點、選中／編輯／操作中的物件或dialog／popover時，接手Ctrl+C／Cmd+C；不改版面，不新增權限或依賴。
+- 共用原copyImage／imageBlob／clipboardWrites；原尺寸PNG包含已完成標註，縮放不改尺寸，OCR後到結果不能覆蓋手動圖片。原複製按鈕行為保留，pagehide解除快捷鍵監聽。
+- npm test **158/158**、npm run check、git diff --check通過。隔離Edge **32項新複製操作＋48項並行回歸＝80項**；圖片用原生Control+C及真實PNG編解碼核對原尺寸／筆畫／文字／編號，優先權案例以可取消合成keydown核對保留預設行為，沒有真的複製OS文字。控制項確實聚焦後才測試；dialog關閉等待close事件後再測試下一個焦點。
+- 驗證區域外、原生文字選取／輸入框／contenteditable／按鈕／連結／summary、選中編號／文字、文字草稿、繪圖中、特殊修飾鍵／repeat／IME／defaultPrevented、Mac分支、OCR手動圖片優先、複製失敗與恢復、原按鈕正常。沒有應用程式例外；並行回歸含真正封裝Tesseract。Chrome API／OCR時序／剪貼簿為受控替身，不宣稱已驗收日常Chrome、OS剪貼簿或Mac實機。
+- QA：output/playwright/copy-shortcut-1.12.0.mjs、ocr-parallel-1.12.0.mjs、同名結果資料夾與unit-1.12.0.log；皆為本機忽略檔。不額外執行不存在的build／monitor，也不重測未改模型品質。
+- 本機工作檔1.12.0，保留前輪全部未提交修改，未commit／push／商店發布／日常Chrome重新載入。交接紀錄已另存並讀回確認。
+
+## 1.11.0 縮放工具與暫時手掌（2026-11-23）
+
+- 依使用者截圖與兩次後續指示，先記錄docs/UI_INVENTORY.md，再移至canvas-stage底部中央固定縮放列；Ctrl＋滾輪只在圖片區作用、10%–400%、游標錨點，一般滾輪仍捲動。深淺色延續daisyUI，未新增權限／依賴／圖片傳送。
+- 修正brushCursor覆蓋viewer導覽指標：空白鍵保持grab、左鍵grabbing、放左鍵grab、放空白鍵回原工具；滑鼠回圖片區時工具按鈕焦點不阻止Space，文字欄位仍輸入空格。
+- npm test **158/158**、npm run check、git diff --check通過。隔離Edge **41項新操作檢查＋48項並行回歸＝89項**，含原生滑鼠／鍵盤／wheel、原圖錨點、一般／區域外滾輪、限制、四種工具指標循環、來源／歷史／OCR／剪貼簿不變、底部定位、深淺色650／320px與按鈕文字完整。並行回歸含真正封裝Tesseract。
+- 已目視深淺色畫面；320px浮層shrink-to-fit壓縮文字已修正為max-content及不壓縮按鈕，錨點測試等待實際Canvas新尺寸生效後比對（誤差小於1原圖像素）。沒有以增加延遲改正式互動，縮放仍立即。
+- QA在output/playwright/zoom-controls-1.11.0.mjs、ocr-parallel-1.11.0.mjs及同名目錄results.json／PNG；Chrome APIs／傳輸／OCR時序／剪貼簿是受控替身，不宣稱已重新載入日常Chrome或重測全部模型。未另外重跑不受影響的完整朗讀／長圖拼接矩陣。
+- 版本1.11.0；保留所有前輪未提交修改，沒有commit／push／商店發布或日常Chrome重新載入。交接紀錄已另存並讀回確認。
+
+## 1.10.0 視窗／整頁截圖與按需分區 OCR（2026-11-23）
+
+- 需求先記錄於 docs/CAPTURE_MODES.md；Obsidian 靈感／規範／Skills 已掃過，GitHub 三個方案比較、使用者指定 Explain and Send 官方資料已查核。保留既定 daisyUI／暖黃、前輪未提交修改與舊 stash／備份。
+- 右鍵新增視窗與整頁，沿用 activeTab／scripting、不新增權限；全擴充擷取節流550ms、同視窗排他。主網頁捲動拼接、DPR／最後段／重疊所有權、固定／sticky可見元素去重、Esc及finally/watchdog還原；切頁／導航／尺寸／位置變動與超限停止。64MP／32760px／128MiB／160區／3分鐘界限明示，不自動縮小或截斷。
+- 新截圖只以背景記憶體Blob與一次性限定編輯頁Port分塊交接，session僅metadata，不寫磁碟或遠端。data URL本機解碼，不 fetch(data:) 或放寬CSP。讀取／斷線／逾時釋放；MV3背景重啟可能失效需重截。交接中鎖住匯入及文字框，避免換圖競爭。
+- 10–400%縮放與手掌／空白鍵、原尺寸匯出；整頁不自動辨識，可框選ROI或全頁約2MP分段，共用Tesseract/Paddle Worker；停止只保留完成段落且不自動複製。維持標註與匯出並行、手動圖片剪貼簿優先、翻譯與朗讀生命週期。範圍分界、複雜版面及圖文品質仍須核對，沒有承諾OCR耗時不變或量測峰值RAM。
+- npm test **158/158**、npm run check、git diff --check 通過。新增原尺寸界限／座標／覆蓋、傳輸授權／一次性／逾時、超限／改視窗／切頁還原、Paddle同worker兩圖只驗證初始化一次、手掌不寫歷史等測試。無 build／monitor script，未額外執行build。套件 allowlist 補齊根模組，未新增依賴或模型。
+- 隔離 Headless Edge **29項長圖檢查**：實際渲染視窗PNG拼接1600×20000（32MP、DPR2）、頂底像素、固定元素不重複、sticky重疊不被後圖擦掉、取消／還原；可見截圖不框選／不捲動，新視窗截圖經分塊交接後會自動OCR／複製，整頁監聽器重注入會清理舊工作。1920×20000（38.4MP）生成來源真實Canvas載入、原尺寸PNG下載讀回、縮放／pan／Space與文字輸入、ROI不裁切、整頁單worker逐段、合法重複文字、剪貼簿與停止部分結果。大圖交接中匯入鎖定、深淺色／650px無全頁水平溢位，無應用程式例外。已目視畫面。
+- 另跑 **48項並行回歸**（含真正封裝Tesseract）、**33項朗讀回歸**（含真正Audio與固定公開測試句Google TTS），共110項瀏覽器檢查。Chrome APIs／傳輸／OCR時序／剪貼簿／SpeechSynthesis依各腳本使用受控替身；沒有把它們當作日常Chrome或真實原生右鍵／activeTab授權的完整驗收，未重測加強／去背模型品質、人工聽驗或所有網站。沒有峰值RAM／60fps效能基準，不宣稱無限長圖或無接縫。
+- QA可重跑：output/playwright/capture-1.10.0.mjs、ocr-parallel-1.10.0.mjs、ocr-speech-1.10.0.mjs；同名目錄 results.json／PNG，均為忽略檔、不在套件。測試素材、mock及本機伺服器編碼／焦點問題已修正後完整重跑，沒有放寬正式CSP。
+- 本機版號1.10.0，未提交／推送／商店發布，日常Chrome未重新載入；遠端已提交狀態仍須與本機工作檔分開。
+
+## 1.9.0 OCR 原文／譯文朗讀（2026-11-23）
+
+- 使用者確認六項規則後，先記錄 `docs/UI_INVENTORY.md`：原文與譯文均為手動朗讀／停止、Google TTS 失敗改瀏覽器語音、自動／手動語言、0.5–2 倍語速、各框下方小按鈕與預設收合設定。沿用 daisyUI、暖黃、既有 Lucide／Feather 喇叭 SVG；版號同步 1.9.0，README／PRIVACY／模型與服務文字已更新。
+- 新增 speech-session／speech-audio／speech-controls 模組，沿用既有背景 TTS_FETCH，只送文字／語言；不新增模型、權限或來源。最多 30,000 字、逐段最多 180 Unicode 字元、單一工作依序取得與播放；改字、重辨、換圖、譯文失效、停止或關閉會停止播放器並拒絕遲到音訊。已送出的當段網路請求可能完成，不再送後續段落。Google 失敗後，剩餘段落沿用瀏覽器語音，缺聲音時明確提示；朗讀不寫剪貼簿、不鎖標註。
+- `npm test` **147／147** 通過，新增 8 項語音驗證／分段／時序／取消／備援／錯誤恢復測試；`npm run check`、`git diff --check` 通過。未新增 build 或 monitor。
+- 隔離 Headless Edge／localhost **33 項朗讀操作檢查通過**：手動與鍵盤播放／停止、沒有自動朗讀、修改後全文／手動語言與語速、原譯文切換、停止後音訊來源與 Blob URL 釋放、遲到回覆、長文依序播放、Google 失敗備援、缺語音、譯文失效、重辨／關閉中止、剪貼簿不變、標註仍可操作、過期錯誤清除、深淺色及 320px 無水平溢出。已目視最終畫面，沒有應用程式例外。
+- Chrome API／翻譯／剪貼簿與 SpeechSynthesis 使用受控替身；Google 播放採真正 HTMLAudioElement，語速與 preservesPitch 讀回正確。另以固定公開測試句 `Hello PageKit`、英文，真正呼叫既有 Google TTS 並完成 Audio 播放；未傳送使用者圖片或辨識結果。這驗證服務與播放事件，不宣稱已人工聽驗所有語言／型號發音或裝置實際音量。系統安裝的各語言語音品質未實測，瀏覽器備援未必離線。
+- 另外在目前 1.9.0 程式重新執行 **48 項既有 OCR／標註並行回歸**，包含真正封裝 Tesseract Worker 辨識及標註保留，全部通過。未重測加強 OCR 或去背模型品質。
+- QA 與證據：`output/playwright/ocr-speech-1.9.0.mjs`、`output/playwright/ocr-speech-1.9.0/results.json`、同資料夾的 light／dark／320px 與結果面板 PNG；並行回歸在 `output/playwright/ocr-parallel-1.9.0/`。測試產物皆為本機忽略檔案，不納入套件或當成日常安裝。
+- 本輪沒有操作日常 Chrome 重新載入、提交、推送或商店發布。包含前輪未提交 1.8.4 修正；遠端版本與本機工作檔須分開看待。舊 1.8.3 草稿 stash／備份保留。需要關閉舊編輯彈窗並重新載入擴充功能，再確認實際 v1.9.0。
+
+## 1.8.4 OCR 與標註並行（2026-11-23）
+
+- 使用者確認五項行為後先寫入 `docs/UI_INVENTORY.md`：全部標註／樣式／一般復原重做／圖片匯出並行；手動複製圖片優先於該次 OCR 自動文字；換圖、裁切、去背與色票仍依序處理。
+- 分開 OCR 與編輯器鎖定，辨識初始化、結果等待與剪貼簿處理時均可標註。重辨不再提交或取消文字／筆畫；辨識狀態、進度與操作回饋分開。來源維持乾淨工作圖，裁切歷史邊界由 editor 的 historyAllowed 保護，按鈕與鍵盤共用限制。
+- 新增序列化剪貼簿寫入：手動圖片請求遞增版本，同輪遲到文字不覆蓋；已開始的自動寫入也排在後來手動圖片之前。複製失敗不阻塞後續請求，取消／關閉後的排隊結果不寫入；OCR 自動複製失敗不搶走文字標註焦點。
+- `npm test` **139／139** 通過；新增 6 項有狀態／時序的回歸測試，覆蓋裁切歷史邊界、來源鎖定與剪貼簿競爭、失敗恢復、取消後不寫入。`npm run check`、`git diff --check` 通過，版號位置同步 1.8.4；沒有新增依賴、權限、模型或網路來源。
+- 隔離 Headless Edge／localhost **48 項檢查通過**，實際載入現行 HTML／CSS／模組，以延遲 OCR 初始化／回傳驗證工具啟用、全部繪圖種類、文字草稿與焦點、編號刪除、樣式、一般歷史、PNG 匯出、來源像素隔離、剪貼簿保留、狀態回饋、跨裁切尺寸的歷史保護，以及成功／錯誤恢復。另以真正封裝的 Tesseract Worker 辨識出 `Parallel OCR`，並行新增編號在完成後保留。沒有應用程式例外。
+- 瀏覽器測試中的 chrome API 與剪貼簿為隔離替身；不讀取日常設定檔或系統剪貼簿。沒有重測加強 OCR 模型、真實系統剪貼簿、日常 Chrome 重新載入或商店審核；不得把本機 1.8.4 工作檔當作已發布版本。
+- 證據與可重跑 QA：`output/playwright/ocr-parallel-1.8.4.mjs`，報告及畫面位於 `output/playwright/ocr-parallel-1.8.4/`。初次 Edge 在沙箱內子程序啟動失敗，改以核准的隔離測試執行環境完成；測試伺服器漏提供圖示及測試 selector 寫錯均已修正並完整重跑，與正式程式無關。已目視最終工作區，沿用原外觀，未重新設計或追加修改輪次。
+- 本輪未提交／推送／發布；原 1.8.3 本機草稿的備份與 stash 未變動。1.8.4 需在擴充功能管理頁重新載入並關閉舊編輯彈窗後使用。
+
 ## 1.8.3 自願贊助入口（2026-11-20）
 
 - 使用者選定編輯器頁尾及擴充功能圖示右鍵入口，文字「請我喝杯咖啡」、顯示 US$3／杯；希望 US$1、平台不提供則保留 US$3。實際 Buy Me a Coffee 後台只列 US$3／US$5／US$10，已取消價格編輯，維持 US$3。
