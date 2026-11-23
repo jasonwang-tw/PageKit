@@ -15,6 +15,62 @@ function setup() {
   return { editor, pointer };
 }
 
+test('手掌及暫時空白鍵拖曳不建立標註或歷史', () => {
+  const { editor, pointer } = setup();
+  editor.tool = 'pan'; editor.begin(pointer(150, 100)); editor.move(pointer(250, 150)); editor.end(pointer(250, 150));
+  assert.equal(editor.items.length, 0); assert.equal(editor.undoStack.length, 0);
+  editor.tool = 'pen'; editor.navigationOverride = true; editor.begin(pointer(150, 100));
+  assert.equal(editor.draft, null);
+});
+
+test('辨識期間一般標註可復原重做，但原圖裁切歷史必須等辨識完成', () => {
+  const { editor } = setup();
+  const beforeCrop = { steps: [] }, cropped = { steps: [{}] };
+  let documentState = beforeCrop, recognizing = false;
+  editor.documentHistory = { capture: () => documentState, restore: next => { documentState = next; } };
+  editor.historyAllowed = snapshot => !recognizing || snapshot.document.steps === documentState.steps;
+  editor.record([], cropped);
+  recognizing = true;
+  assert.equal(editor.canUndo, false);
+  editor.undo();
+  assert.equal(documentState, cropped);
+  assert.equal(editor.undoStack.length, 1);
+  const item = { tool: 'number', color: 'red', start: { x: 50, y: 50 }, radius: 16, fontSize: 18, number: 1 };
+  editor.commit(item);
+  assert.equal(editor.canUndo, true);
+  editor.undo();
+  assert.deepEqual(editor.items, []);
+  assert.equal(editor.canRedo, true);
+  editor.redo();
+  assert.deepEqual(editor.items, [item]);
+  recognizing = false;
+  editor.undo();
+  editor.undo();
+  assert.equal(documentState, beforeCrop);
+  recognizing = true;
+  assert.equal(editor.canRedo, false);
+  editor.redo();
+  assert.equal(documentState, beforeCrop);
+  recognizing = false;
+  editor.redo();
+  assert.equal(documentState, cropped);
+});
+
+test('匯入或去背鎖定期間不修改復原重做歷史', () => {
+  const { editor } = setup();
+  editor.commit({ tool: 'number', start: { x: 50, y: 50 }, radius: 16, fontSize: 18, number: 1 });
+  editor.disabled = true;
+  assert.equal(editor.canUndo, false);
+  editor.undo();
+  assert.equal(editor.items.length, 1);
+  editor.disabled = false;
+  editor.undo();
+  editor.disabled = true;
+  assert.equal(editor.canRedo, false);
+  editor.redo();
+  assert.equal(editor.items.length, 0);
+});
+
 test('直線吸附八個方向，水平180度、垂直90度與45度反向皆正確', () => {
   const start = {x:100,y:100};
   for (const [dx,dy,ex,ey] of [[80,10,80,0],[80,70,75,75],[10,80,0,80],[-80,70,-75,75],[-80,10,-80,0],[-80,-70,-75,-75],[10,-80,0,-80],[80,-70,75,-75]]) {

@@ -22,13 +22,14 @@
         <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="選擇本機圖片">
         <button id="shortcuts" class="btn btn-sm btn-outline" title="在瀏覽器設定自訂截圖快捷鍵">設定快捷鍵</button>
         <button id="open-model-services" class="btn btn-sm btn-outline" aria-haspopup="dialog" aria-controls="model-services-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3m4 0h9M4 17h9m4 0h3"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg><span>模型與服務管理</span><span id="model-services-activity" class="badge badge-sm" role="status" hidden>下載中</span></button>
-        <button id="copy-image" class="btn btn-sm btn-outline" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 21H5a2 2 0 0 1-2-2V8"/></svg><span>複製圖片</span></button>
+        <button id="copy-image" title="滑鼠在圖片區且沒有選取或其他控制項焦點時，可按 Ctrl+C／Cmd+C 複製圖片" class="btn btn-sm btn-outline" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 21H5a2 2 0 0 1-2-2V8"/></svg><span>複製圖片</span></button>
         <button id="save-image" class="btn btn-sm btn-primary" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/></svg><span>下載 PNG</span></button>
       </div>
     </header>
     <div class="toolbar-wrap">
       <div class="toolbar" role="toolbar" aria-label="截圖標註工具">
         <div class="tools" role="group" aria-label="標註工具">
+          <button class="btn btn-sm btn-ghost" data-tool="pan" aria-pressed="false" title="手掌：拖曳可視區域，或按住空白鍵暫時拖曳"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5a2 2 0 0 1 4 0v7-9a2 2 0 0 1 4 0v9-7a2 2 0 0 1 4 0v10a7 7 0 0 1-12 5l-5-6a2 2 0 0 1 3-3l2 2Z"/></svg>手掌</button>
           <button class="btn btn-sm btn-ghost" data-tool="pen" aria-pressed="true" title="畫筆"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21H3v-5Z"/></svg>畫筆</button>
           <button class="btn btn-sm btn-ghost" data-tool="line" aria-pressed="false" title="拖曳吸附水平（180°）、垂直（90°）或 45° 斜線"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>直線</button>
           <button class="btn btn-sm btn-ghost" data-tool="rect" aria-pressed="false" title="矩形"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/></svg>矩形</button>
@@ -63,9 +64,12 @@
           <p id="cutout-status" role="status" aria-live="polite">自動分離商品或人物背景；圖片全程留在本機。</p>
           <progress id="cutout-progress" class="progress progress-primary" max="1" value="0" hidden aria-label="去背處理進度"></progress>
         </section>
-        <div id="canvas-viewport" class="canvas-viewport">
-          <div id="empty-image" class="empty-image"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M17 7H7v10m24-10h10v10M7 31v10h10m24-10v10H31"/><rect x="16" y="16" width="16" height="16" rx="3"/></svg><h3>截圖或匯入圖片</h3><p>點上方「匯入圖片」、使用網頁截圖，<br>或按 Ctrl+V／Cmd+V 貼上圖片。<br>載入後可標註、OCR 與本機去背。</p></div>
-          <div id="preview" hidden><canvas id="screenshot" role="img" aria-label="可繪製標註的截圖" tabindex="0"></canvas></div>
+        <div class="canvas-stage">
+          <div id="canvas-viewport" class="canvas-viewport">
+            <div id="empty-image" class="empty-image"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M17 7H7v10m24-10h10v10M7 31v10h10m24-10v10H31"/><rect x="16" y="16" width="16" height="16" rx="3"/></svg><h3>截圖或匯入圖片</h3><p>點上方「匯入圖片」、使用網頁截圖，<br>或按 Ctrl+V／Cmd+V 貼上圖片。<br>載入後可標註、OCR 與本機去背。</p></div>
+            <div id="preview" hidden><canvas id="screenshot" role="img" aria-label="可繪製標註的截圖" tabindex="0"></canvas></div>
+          </div>
+        <div class="zoom-controls" role="group" aria-label="圖片顯示縮放，不影響匯出尺寸"><button id="zoom-out" class="btn btn-sm btn-outline" disabled aria-label="縮小圖片">−</button><button id="zoom-reset" class="btn btn-sm btn-outline" disabled title="回到原始像素 100%；圖片區可按 Ctrl＋滾輪縮放">100%</button><button id="zoom-in" class="btn btn-sm btn-outline" disabled aria-label="放大圖片">＋</button><button id="zoom-fit" class="btn btn-sm btn-ghost" disabled>符合寬度</button></div>
         </div>
         <p class="canvas-hint"><span>文字與編號可點選、拖曳</span><span><kbd class="kbd kbd-xs">Delete</kbd> 刪除選取</span><span><kbd class="kbd kbd-xs">Esc</kbd> 取消操作</span><span>點圖片後 <kbd class="kbd kbd-xs">Ctrl+V／Cmd+V</kbd> 貼上取代圖片與標註</span></p>
       </section>
@@ -73,8 +77,15 @@
         <div class="panel-heading result-heading"><h2 id="result-heading">文字辨識</h2><span id="recognition-state" class="badge badge-sm">等待截圖</span></div>
         <label class="field-label" for="engine">辨識引擎</label>
         <select class="select select-bordered engine-select" id="engine"><option value="standard">內建 OCR（免下載）</option><option value="enhanced">加強辨識（PP-OCRv6 Small）</option></select>
-        <label class="sr-only" for="text">可編輯的 OCR 辨識結果</label>
+        <div id="fullpage-ocr-controls" class="fullpage-ocr-controls" hidden><p>整頁圖片先保留原尺寸供編輯。可框選文字區辨識，或依序辨識整頁；縮放不會重新辨識。</p><div class="scope-actions"><button id="select-ocr-region" class="btn btn-sm btn-primary" aria-pressed="false" disabled>框選文字辨識</button><button id="recognize-page" class="btn btn-sm btn-outline" disabled>辨識整頁</button></div></div>
+        <button id="stop-recognition" class="btn btn-sm btn-outline" hidden>停止辨識</button>
+        <div class="speech-field-heading"><label class="field-label" for="text">辨識原文</label><p id="speech-original-status" class="speech-status" role="status" aria-live="polite"></p><div class="speech-icon-actions"><button id="speak-original" class="btn btn-sm btn-ghost speech-icon-button" type="button" disabled aria-pressed="false" aria-label="朗讀辨識原文" title="朗讀辨識原文"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><button id="speech-settings-original" class="btn btn-sm btn-ghost speech-icon-button" type="button" data-speech-settings popovertarget="speech-settings" aria-controls="speech-settings" aria-haspopup="dialog" aria-expanded="false" aria-label="朗讀設定（共用）" title="朗讀設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.6 3-.5 2.1-1.5.9-2.1-.6-2.4 4.2 1.6 1.5v1.8l-1.6 1.5 2.4 4.2 2.1-.6 1.5.9.5 2.1h4.8l.5-2.1 1.5-.9 2.1.6 2.4-4.2-1.6-1.5v-1.8l1.6-1.5-2.4-4.2-2.1.6-1.5-.9-.5-2.1Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <textarea class="textarea textarea-bordered result-text" id="text" placeholder="截圖載入後自動辨識，完成後自動複製。&#10;辨識結果可在這裡編輯。" spellcheck="false"></textarea>
+        <div class="tool-style-popover speech-settings-popover card card-border" id="speech-settings" popover="auto" role="dialog" aria-labelledby="speech-settings-title"><h3 id="speech-settings-title">朗讀設定</h3><div class="ocr-options">
+          <label class="option-field" for="speech-language"><span>朗讀語言</span><select id="speech-language" class="select select-sm"><option value="auto">自動判斷</option></select></label>
+          <label class="option-field" for="speech-rate"><span>語速</span><span class="speech-rate-control"><input id="speech-rate" class="range range-primary range-sm" type="range" min="0.5" max="2" step="0.25" value="1" aria-valuetext="1 倍"><output id="speech-rate-value" for="speech-rate">1 倍</output></span></label>
+          <p>手動朗讀目前結果框全文（含修改），最多 30,000 字。型號可手動選英文；發音仍依語音服務而定。Google 語音只傳文字、不傳圖片；失敗時改用瀏覽器提供的語音，可能需要網路。</p>
+        </div></div>
         <button class="btn btn-primary copy-text" id="copy" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 21H5a2 2 0 0 1-2-2V8"/></svg>複製文字</button>
         <p id="quality-note" class="quality-note" role="status" hidden></p>
         <section id="translation-controls" class="ocr-translation" aria-labelledby="translation-heading" aria-busy="false">
@@ -82,7 +93,7 @@
           <div class="translation-actions"><label class="sr-only" for="translation-language">翻譯目標語言</label><select id="translation-language" class="select select-sm" aria-label="翻譯目標語言"></select><button id="translate-ocr" class="btn btn-sm btn-outline" disabled>翻譯</button></div>
           <p class="translation-note">手動翻譯目前結果框的全部文字（含修改），只傳文字至 Google，不傳圖片。最多 30,000 字。</p>
           <p id="translation-status" role="status" aria-live="polite"></p>
-          <div id="translation-output" hidden><label class="field-label" for="translated-text">譯文</label><textarea id="translated-text" class="textarea textarea-bordered translated-text" readonly spellcheck="false" placeholder="譯文會顯示在這裡"></textarea><button id="copy-translation" class="btn btn-sm btn-primary" disabled>複製譯文</button></div>
+          <div id="translation-output" hidden><div class="speech-field-heading"><label class="field-label" for="translated-text">翻譯譯文</label><p id="speech-translated-status" class="speech-status" role="status" aria-live="polite"></p><div class="speech-icon-actions"><button id="speak-translated" class="btn btn-sm btn-ghost speech-icon-button" type="button" disabled aria-pressed="false" aria-label="朗讀翻譯譯文" title="朗讀翻譯譯文"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><button id="speech-settings-translated" class="btn btn-sm btn-ghost speech-icon-button" type="button" data-speech-settings popovertarget="speech-settings" aria-controls="speech-settings" aria-haspopup="dialog" aria-expanded="false" aria-label="朗讀設定（共用）" title="朗讀設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.6 3-.5 2.1-1.5.9-2.1-.6-2.4 4.2 1.6 1.5v1.8l-1.6 1.5 2.4 4.2 2.1-.6 1.5.9.5 2.1h4.8l.5-2.1 1.5-.9 2.1.6 2.4-4.2-1.6-1.5v-1.8l1.6-1.5-2.4-4.2-2.1.6-1.5-.9-.5-2.1Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div><textarea id="translated-text" class="textarea textarea-bordered translated-text" readonly spellcheck="false" placeholder="譯文會顯示在這裡"></textarea><button id="copy-translation" class="btn btn-sm btn-primary" disabled>複製譯文</button></div>
         </section>
         <details class="collapse collapse-arrow settings-section" id="recognition-settings">
           <summary class="collapse-title">辨識設定</summary>
@@ -159,7 +170,7 @@
           <progress id="cutout-download-progress" class="progress progress-primary" max="1" value="0" hidden aria-label="去背模型下載進度"></progress>
           <p>下載後可離線去背；刪除不影響 OCR 模型或目前圖片。</p>
         </section>
-        <section class="card card-border service-card" aria-labelledby="translation-service-title"><div class="service-heading"><h3 id="translation-service-title">Google 翻譯</h3><span class="badge badge-sm">需連網</span></div><p class="service-name">線上服務 · 無須安裝</p><p>選取翻譯與 OCR 結果翻譯只在操作時傳送文字，不傳圖片；沒有可下載或刪除的本機翻譯模型。</p></section>
+        <section class="card card-border service-card" aria-labelledby="translation-service-title"><div class="service-heading"><h3 id="translation-service-title">Google 翻譯與語音</h3><span class="badge badge-sm">需連網</span></div><p class="service-name">線上服務 · 無須安裝</p><p>選取翻譯、OCR 翻譯與朗讀只在操作時傳送文字，不傳圖片；朗讀失敗可使用瀏覽器語音備援，沒有需下載或刪除的本機翻譯／語音模型。</p></section>
       </div>
       <p class="model-services-note">關閉此管理畫面不會取消下載；需要停止時請按「取消下載」。</p>
     </div>

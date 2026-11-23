@@ -42,7 +42,9 @@ afterEach(() => {
 
 test('安裝時註冊翻譯、截圖與圖片 OCR 選單', () => {
   listeners.installed();
-  assert.equal(menus.length, 6);
+  assert.equal(menus.length, 8);
+  assert.equal(menus.find(menu=>menu.id==='capture-visible').title, '視窗截圖');
+  assert.equal(menus.find(menu=>menu.id==='capture-fullpage').title, '整頁截圖');
   assert.equal(menus[0].id, 'instant-translate');
   assert.deepEqual(menus[0].contexts, ['selection']);
 });

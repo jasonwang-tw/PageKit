@@ -4,17 +4,22 @@ import { installModelService } from './ocr/model-download.js';
 import { createUiStyleLoader } from './ui-style-service.js';
 import { installCutoutService } from './ocr/cutout-model-download.js';
 import { installOcrTranslation } from './ocr/translation-port.js';
+import { capturePage, captureVisible } from './page-capture.js';
+import { captureAssets } from './capture-transfer.js';
 
 installModelService();
 installCutoutService();
 installOcrTranslation();
 const loadUiStyles = createUiStyleLoader(path => chrome.runtime.getURL(path));
+const assets = captureAssets(chrome.runtime);
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     for (const menu of [
       { id: 'instant-translate', title: '翻譯選取文字', contexts: ['selection'] },
       { id: 'screenshot-ocr', title: '截圖與標註', contexts: ['page', 'selection', 'image', 'link', 'video', 'audio', 'editable', 'frame'] },
+      { id: 'capture-visible', title: '視窗截圖', contexts: ['page', 'selection', 'image', 'link', 'video', 'audio', 'editable', 'frame'] },
+      { id: 'capture-fullpage', title: '整頁截圖', contexts: ['page', 'selection', 'image', 'link', 'video', 'audio', 'editable', 'frame'] },
       { id: 'image-ocr', title: '圖片文字辨識', contexts: ['image'] }
     ]) chrome.contextMenus.create({ ...menu, documentUrlPatterns: ['http://*/*', 'https://*/*'] });
     chrome.contextMenus.create({ id: 'screenshot-shortcut', title: '設定截圖快捷鍵', contexts: ['action'] });
@@ -43,8 +48,9 @@ async function expireJobs() {
 
 const captureRequests = new Set();
 async function requestScreenshot(tab, imageRequest) {
-  if (captureRequests.has(tab.id)) return;
-  captureRequests.add(tab.id);
+  const windowKey = `window:${tab.windowId}`;
+  if (captureRequests.has(tab.id) || captureRequests.has(windowKey)) return;
+  captureRequests.add(tab.id); captureRequests.add(windowKey);
   try {
     const [active] = await chrome.tabs.query({ active: true, windowId: tab.windowId });
     if (active?.id !== tab.id) throw new Error('請回到原分頁再執行截圖');
@@ -69,7 +75,7 @@ async function requestScreenshot(tab, imageRequest) {
     }
     await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['content/screenshot-region.js'] });
     await chrome.tabs.sendMessage(tab.id, { type: 'REGION_CAPTURE_CLEAR' }, { frameId: 0 });
-    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    const dataUrl = await captureVisible(chrome.tabs, tab.windowId);
     const [after] = await chrome.tabs.query({ active: true, windowId: tab.windowId });
     if (after?.id !== tab.id || (active.url && after.url !== active.url)) throw new Error('截圖時分頁已切換，請回到原分頁重試');
     if (!dataUrl?.startsWith('data:image/png;base64,') || dataUrl.length > MAX_CAPTURE_LENGTH) throw new Error('截圖過大，請縮小瀏覽器視窗後重試');
@@ -84,8 +90,29 @@ async function requestScreenshot(tab, imageRequest) {
     try { await chrome.tabs.sendMessage(tab.id, { type: 'REGION_CAPTURE_CLEAR' }, { frameId: 0 }); } catch {}
     await editorWindow(`ocr/ocr.html?error=${encodeURIComponent(error.message)}`, Boolean(tab.incognito));
   } finally {
-    captureRequests.delete(tab.id);
+    captureRequests.delete(tab.id); captureRequests.delete(windowKey);
   }
+}
+
+async function requestPageCapture(tab, mode) {
+  // Lock the source window, not just a tab, while scroll capture owns it.
+  const windowKey = `window:${tab.windowId}`;
+  if (captureRequests.has(tab.id) || captureRequests.has(windowKey)) return;
+  captureRequests.add(tab.id); captureRequests.add(windowKey);
+  let id;
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['content/screenshot-region.js'] });
+    await chrome.tabs.sendMessage(tab.id, { type: 'REGION_CAPTURE_CLEAR' }, { frameId: 0 });
+    await chrome.storage.session.remove(`region:${tab.id}`);
+    const result = await capturePage(tab, mode);
+    id = crypto.randomUUID(); assets.put(id, result.blob);
+    await expireJobs();
+    await chrome.storage.session.set({ [`ocr:${id}`]: { asset: true, captureMode: mode, width: result.width, height: result.height, createdAt: Date.now() } });
+    await editorWindow(`ocr/ocr.html#${id}`, Boolean(tab.incognito));
+  } catch (error) {
+    if (id) { assets.remove(id); await chrome.storage.session.remove(`ocr:${id}`); }
+    await editorWindow(`ocr/ocr.html?error=${encodeURIComponent(error.message || '截圖失敗，請縮小範圍後重試')}`, Boolean(tab.incognito));
+  } finally { captureRequests.delete(tab.id); captureRequests.delete(windowKey); }
 }
 
 async function finishRegion(message, sender) {
@@ -114,6 +141,7 @@ function openShortcutSettings() {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (tab?.id != null && ['capture-visible', 'capture-fullpage'].includes(info.menuItemId)) return requestPageCapture(tab, info.menuItemId === 'capture-fullpage' ? 'fullpage' : 'visible');
   if (info.menuItemId === 'support-pagekit') return chrome.tabs.create({ url: 'https://buymeacoffee.com/jasonwang0052' });
   if (info.menuItemId === 'import-image') return editorWindow('ocr/ocr.html', Boolean(tab?.incognito));
   if (info.menuItemId === 'screenshot-shortcut') return openShortcutSettings();

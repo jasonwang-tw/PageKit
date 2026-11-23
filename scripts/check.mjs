@@ -53,6 +53,7 @@ for (const [path, hash] of Object.entries(paddle.assets)) {
 }
 assert.ok(!manifest.content_security_policy.extension_pages.includes("'unsafe-eval'"));
 assert.ok(readFileSync(resolve(root, 'ocr/ocr.html'), 'utf8').includes('content="connect-src \'self\'"'));
+for (const path of ['capture-geometry.js','capture-transfer.js','page-capture.js','content/fullpage-capture.js','ocr/image-viewer.js','ocr/capture-reader.js','ocr/ocr-tiles.js']) assert.ok(existsSync(resolve(root,path)), `截圖資源不存在：${path}`);
 const paddleWorker = readFileSync(resolve(root, 'ocr/paddle-worker.js'), 'utf8');
 assert.ok(paddleWorker.includes("new URL('../vendor/paddle/ort/', import.meta.url)"));
 assert.ok(paddleWorker.includes('verifyModel('));
@@ -72,6 +73,8 @@ for (const [path, hash] of Object.entries(cutout.assets)) {
 }
 for (const path of ['cutout-model-store.js','cutout-model-download.js','cutout-controls.js','cutout-worker.js','cutout-pixels.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
 for (const path of ['translation-controls.js','translation-port.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
+for (const path of ['speech-controls.js','speech-settings.js','speech-session.js','speech-audio.js','image-copy-shortcut.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
+for (const id of ['speak-original','speak-translated','speech-settings','speech-language','speech-rate']) assert.ok(editorHtml.includes(`id="${id}"`));
 assert.ok(existsSync(resolve(root,'ocr/model-services.js')));
 assert.ok(existsSync(resolve(root,'ocr/brush-cursor.js')));
 assert.ok(existsSync(resolve(root,'ocr/line-geometry.js')) && editorHtml.includes('data-tool="line"'));

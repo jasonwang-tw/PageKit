@@ -11,6 +11,7 @@ export function brushCursor(canvas, state) {
   let point = null;
   function refresh() {
     const current = state(), brush = ['pen', 'highlight'].includes(current.tool);
+    if (current.cursor) { ring.setAttribute('hidden', ''); canvas.style.cursor = current.cursor; return; }
     const box = canvas.getBoundingClientRect();
     const visible = brush && !current.disabled && point && box.width > 0 && box.height > 0
       && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom

@@ -1,6 +1,6 @@
 import { TRANSLATION_LANGUAGES, validateOcrTranslation } from '../translation-service.js';
 
-export function translationControls({ source, locked }) {
+export function translationControls({ source, locked, changed = () => {} }) {
   const $ = id => document.getElementById(id);
   const target = $('translation-language'), result = $('translated-text');
   for (const [code, name] of TRANSLATION_LANGUAGES) { const option = document.createElement('option'); option.value = code; option.textContent = name; target.append(option); }
@@ -10,7 +10,7 @@ export function translationControls({ source, locked }) {
   function disconnect() { clearInterval(heartbeat); heartbeat = null; const previous = port; port = null; previous?.disconnect(); }
   function invalidate(text = '原文已更新，請按「翻譯」取得新譯文。') {
     disconnect(); snapshot = null; requestTarget = null; result.value = ''; $('translation-output').hidden = true;
-    message(text); render();
+    message(text); render(); changed();
   }
   function render() {
     if (snapshot !== null && (source.value !== snapshot || target.value !== requestTarget)) { invalidate(); return; }
@@ -29,7 +29,7 @@ export function translationControls({ source, locked }) {
     try {
       validateOcrTranslation(source.value, target.value);
       disconnect(); snapshot = source.value; requestTarget = target.value;
-      result.value = ''; $('translation-output').hidden = true;
+      result.value = ''; $('translation-output').hidden = true; changed();
       port = chrome.runtime.connect({ name: 'pagekit-ocr-translation' });
       const current = port; message('正在翻譯，僅傳送結果框中的文字…'); render();
       current.onMessage.addListener(event => {
@@ -42,7 +42,7 @@ export function translationControls({ source, locked }) {
           result.value = event.translated; $('translation-output').hidden = false;
           message('翻譯完成；按「複製譯文」才會更新剪貼簿。');
         } else message(event.error || '翻譯服務未回傳譯文，請重試。', true);
-        render();
+        render(); changed();
       });
       current.onDisconnect.addListener(() => {
         if (port !== current || closing) return;

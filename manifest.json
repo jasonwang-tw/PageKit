@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "頁匣 PageKit",
   "short_name": "PageKit",
-  "version": "1.8.3",
+  "version": "1.12.2",
   "description": "頁匣 PageKit：瀏覽器效率工具箱，提供即時翻譯、截圖標註、圖片文字辨識與複製。",
   "permissions": [
     "activeTab",
@@ -14,7 +14,11 @@
   "host_permissions": [
     "https://translate.google.com/*"
   ],
-  "optional_host_permissions": ["https://paddle-model-ecology.bj.bcebos.com/*", "https://huggingface.co/*", "https://us.aws.cdn.hf.co/*"],
+  "optional_host_permissions": [
+    "https://paddle-model-ecology.bj.bcebos.com/*",
+    "https://huggingface.co/*",
+    "https://us.aws.cdn.hf.co/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -46,8 +50,13 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/ocr-target.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content/ocr-target.js"
+      ],
       "all_frames": true,
       "match_about_blank": true,
       "run_at": "document_start"

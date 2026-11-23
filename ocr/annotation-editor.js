@@ -70,6 +70,7 @@ export class AnnotationEditor {
     this.highlightWidth = 20;
     this.fontSize = 24;
     this.disabled = false;
+    this.historyAllowed = () => true;
     canvas.width = source.width;
     canvas.height = source.height;
     this.pointerEvents = { pointerdown: event => this.begin(event), pointermove: event => this.move(event), pointerup: event => this.end(event), pointercancel: () => this.cancel() };
@@ -80,7 +81,7 @@ export class AnnotationEditor {
       this.selectionBox.hidden = true;
       this.selectionBox.setAttribute('aria-hidden', 'true');
       canvas.parentElement.append(this.selectionBox);
-      this.brushCursor = brushCursor(canvas, () => ({ tool: this.tool, width: this.width, highlightWidth: this.highlightWidth, disabled: this.disabled, nativeWidth: this.draft?.tool === this.tool ? this.draft.width : undefined }));
+      this.brushCursor = brushCursor(canvas, () => ({ tool: this.tool, width: this.width, highlightWidth: this.highlightWidth, disabled: this.disabled || this.navigationOverride, cursor: !this.disabled && (this.navigationCursor || (this.tool === 'pan' ? 'grab' : null)), nativeWidth: this.draft?.tool === this.tool ? this.draft.width : undefined }));
     }
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => { this.positionTextEditor(); this.positionSelection(); this.brushCursor?.refresh(); });
@@ -89,8 +90,10 @@ export class AnnotationEditor {
     this.render();
   }
   get nextNumber() { return Math.max(0, ...this.items.filter(item => item.tool === 'number').map(item => item.number)) + 1; }
+  get canUndo() { return !this.disabled && this.undoStack.length > 0 && this.historyAllowed(this.undoStack.at(-1)); }
+  get canRedo() { return !this.disabled && this.redoItems.length > 0 && this.historyAllowed(this.redoItems.at(-1)); }
   refreshCursor() {
-    this.canvas.style.cursor = this.disabled ? 'default' : this.tool === 'text' ? 'text' : 'crosshair';
+    this.canvas.style.cursor = this.disabled ? 'default' : this.navigationCursor || (this.tool === 'pan' ? 'grab' : this.tool === 'text' ? 'text' : 'crosshair');
     this.brushCursor?.refresh();
   }
   scale() { return this.canvas.width / this.canvas.getBoundingClientRect().width; }
@@ -122,7 +125,7 @@ export class AnnotationEditor {
     return -1;
   }
   begin(event) {
-    if (this.disabled || event.button !== 0 || this.draft || this.moving) return;
+    if (this.disabled || this.navigationOverride || this.tool === 'pan' || event.button !== 0 || this.draft || this.moving) return;
     event.preventDefault();
     this.canvas.focus?.({ preventScroll: true });
     this.finishText(true);
@@ -157,6 +160,7 @@ export class AnnotationEditor {
     this.render();
   }
   move(event) {
+    if (this.navigationOverride || this.tool === 'pan') return;
     if (this.moving && event.pointerId === this.pointerId) {
       const point = this.point(event);
       const dx = point.x - this.moving.from.x;
@@ -322,12 +326,18 @@ export class AnnotationEditor {
     this.onChange();
   }
   undo() {
-    this.finishText(true); this.cancel();
+    if (this.disabled) return;
+    this.finishText(true);
+    if (!this.canUndo) return;
+    this.cancel();
     if (this.undoStack.length) { const previous=this.historySnapshot(),next=this.undoStack.at(-1); this.documentHistory?.restore(next.document); this.undoStack.pop(); this.redoItems.push(previous); this.items = next.items; }
     this.render(); this.onChange();
   }
   redo() {
-    this.finishText(true); this.cancel();
+    if (this.disabled) return;
+    this.finishText(true);
+    if (!this.canRedo) return;
+    this.cancel();
     if (this.redoItems.length) { const previous=this.historySnapshot(),next=this.redoItems.at(-1); this.documentHistory?.restore(next.document); this.redoItems.pop(); this.undoStack.push(previous); this.items = next.items; }
     this.render(); this.onChange();
   }
