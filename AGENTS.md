@@ -1,6 +1,6 @@
 # 專案規範
 
-- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.13.0。
+- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.15.0。
 - 顯示名稱與新資源使用 PageKit。舊分頁使用的 `__easy*` 狀態與圖片座標通道屬相容識別，更名時保留以避免重複監聽或跨框架中斷。
 - 修改前先讀 README.md 與本檔。Git commit 訊息使用繁體中文。
 - 提交、推送、建立遠端分支及發布只能使用 GitHub App connector；不可使用 git add／commit／push 或 gh 作為替代。
@@ -35,3 +35,8 @@
 - 1.12.2 朗讀圖示與共用齒輪Popover依docs/UI_INVENTORY.md，取代舊下方文字按鈕／details；維持可存取名稱、停止狀態、焦點與共享語言語速，不改音訊服務或剪貼簿。
 
 - 1.13.0 截圖自動複製與設定依 docs/UI_INVENTORY.md：預設自動複製原圖，可本機儲存開關；OCR 永不自動複製文字。自動工作必須讓位給手動複製／換圖／關閉，不讀剪貼簿、不加權限。
+- 1.14.0 頁尾採使用者選定 A，意見回饋／留下評價／贊助三個直接入口依 docs/UI_INVENTORY.md；維持原生另開分頁與 daisyUI，不附帶截圖、OCR 或帳號資料，不催評、預設星數或以獎勵換評價。
+
+- 1.15.0 所有截圖／匯入入口使用 editor-window.js；預設單一視窗、一般／無痕分離，設定與替換提示依 docs/UI_INVENTORY.md。完整導航觸發舊工作清理；取消及失敗不清除已開啟圖片，不新增 tabs 權限。留下評價依使用者要求使用既有暖黃 primary。
+
+- 設計階段可接手備份依 README「備份與跨裝置接手」；製作到階段成果時，連同可編輯來源／素材／規範備份至 pCloud PageKit 專屬資料夾，並更新 Obsidian 專案入口及總覽。接手須先核對最新版本與校驗，不將舊 Git 或僅匯出圖當完整來源。

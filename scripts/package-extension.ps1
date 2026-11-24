@@ -5,7 +5,7 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 if (-not $Destination) { $Destination = Join-Path $projectRoot 'output/packages' }
 $null = New-Item -ItemType Directory -Force -Path $Destination
 $manifest = Get-Content -LiteralPath (Join-Path $projectRoot 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$paths = @('manifest.json','background.js','translation-service.js','ocr-utils.js','ui-style-service.js','capture-geometry.js','capture-transfer.js','page-capture.js','PRIVACY.md','icons/LUCIDE-LICENSE.txt')
+$paths = @('manifest.json','background.js','translation-service.js','ocr-utils.js','ui-style-service.js','capture-geometry.js','capture-transfer.js','page-capture.js','capture-preferences.js','editor-window.js','PRIVACY.md','icons/LUCIDE-LICENSE.txt')
 $paths += @($manifest.icons.PSObject.Properties.Value)
 foreach ($directory in @('content','ocr','vendor/ocr')) {
     $paths += Get-ChildItem -LiteralPath (Join-Path $projectRoot $directory) -Recurse -File | ForEach-Object { $_.FullName.Substring($projectRoot.Length + 1).Replace('\','/') }

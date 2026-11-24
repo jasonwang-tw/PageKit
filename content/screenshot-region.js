@@ -1,6 +1,6 @@
 // Frozen viewport selector, isolated from website styles and scripts.
 (() => {
-  const version = '1.13.0';
+  const version = '1.15.0';
   if (window.__easyCaptureVersion === version) return;
   window.__easyCaptureCleanup?.();
   window.__easyCaptureVersion = version;

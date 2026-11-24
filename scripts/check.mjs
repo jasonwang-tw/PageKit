@@ -53,7 +53,7 @@ for (const [path, hash] of Object.entries(paddle.assets)) {
 }
 assert.ok(!manifest.content_security_policy.extension_pages.includes("'unsafe-eval'"));
 assert.ok(readFileSync(resolve(root, 'ocr/ocr.html'), 'utf8').includes('content="connect-src \'self\'"'));
-for (const path of ['capture-geometry.js','capture-transfer.js','page-capture.js','content/fullpage-capture.js','ocr/image-viewer.js','ocr/capture-reader.js','ocr/ocr-tiles.js']) assert.ok(existsSync(resolve(root,path)), `截圖資源不存在：${path}`);
+for (const path of ['capture-geometry.js','capture-transfer.js','page-capture.js','capture-preferences.js','editor-window.js','content/fullpage-capture.js','ocr/image-viewer.js','ocr/capture-reader.js','ocr/ocr-tiles.js']) assert.ok(existsSync(resolve(root,path)), `截圖資源不存在：${path}`);
 const paddleWorker = readFileSync(resolve(root, 'ocr/paddle-worker.js'), 'utf8');
 assert.ok(paddleWorker.includes("new URL('../vendor/paddle/ort/', import.meta.url)"));
 assert.ok(paddleWorker.includes('verifyModel('));

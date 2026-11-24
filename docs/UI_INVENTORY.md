@@ -2,6 +2,25 @@
 
 > 各段保留當時規格；同一行為以最新版本為準。1.13.0 起 OCR 不再自動複製文字，截圖原圖的自動複製由「設定管理」控制。
 
+## 1.15.0 單一截圖視窗與評價強調（2026-11-24；使用者指定）
+
+- 預設開啟「重用單一截圖視窗」，放在「設定管理 → 截圖設定」，使用既有 daisyUI checkbox，另有獨立儲存狀態。本機鍵 `pagekitSingleEditorWindow`；關閉後每次截圖另開視窗，與自動複製圖片設定互不影響。設定只影響之後的操作，不自動關閉已存在的多個視窗。
+- 快捷鍵、右鍵框選、圖片 OCR、可見／整頁截圖統一使用相同視窗入口。新截圖完成才取代原圖及標註；取消框選保留舊工作。提示使用者先複製或下載要保留的圖片。匯入入口已有視窗時只聚焦，讓使用者由原視窗匯入。
+- 每次尋找本擴充功能的編輯 popup，不依賴 Service Worker 記憶體中的舊 ID；關窗後可重新建立，連續請求序列處理。一般／無痕視窗各自重用，不跨隱私環境。保留現有尺寸／位置，最小化時還原並聚焦。不掃描一般網頁內容、不新增權限。
+- 更換圖片必須觸發完整文件載入，不能只修改 hash；沿用 pagehide 清理 OCR、語音及剪貼簿工作。截圖失敗在已有編輯器提示錯誤，不清除舊圖。無既有編輯器才顯示錯誤視窗。
+- 使用者另外指定凸顯「留下評價」：沿用暖黃色 primary 底／深色文字的 daisyUI btn-primary，hover／鍵盤焦點保留可讀對比，不改其位置、文案、網址、贊助與回饋入口；120ms 色彩回饋、支援減動效。
+- 延續前輪三庫核對的 PageKit 規範與 Skills，沒有另起品牌／框架；靈感庫沒有已定案的單一視窗方案。對標既有「截圖後自動複製」設定、daisyUI primary button 與原生 Chrome 視窗聚焦／最小化還原。再次核對 [daisyUI GitHub](https://github.com/saadeghi/daisyui)（MIT）、[Chrome windows](https://developer.chrome.com/docs/extensions/reference/api/windows)／[tabs](https://developer.chrome.com/docs/extensions/reference/api/tabs) 官方 API。測試需涵蓋開關保存／錯誤、重用／關窗／服務重啟／並發、取消不換圖、深淺色及窄視窗。
+
+## 1.14.0 頁尾意見回饋與評價（2026-11-24；使用者已選 A）
+
+- 使用者在「直接顯示三個入口」與「收合協助選單」中選 A，要求保留贊助入口與現有 daisyUI 風格，完成後測試。沿用既定工具入門者／工作者場景、深淺色／暖黃與密度，沒有新品牌方向，不重問已確認的設計題。
+- 右下角依序直接顯示「意見回饋」、「留下評價」、「請我喝杯咖啡」；沿用 daisyUI btn／btn-sm／btn-ghost、既有 support-link 與 Lucide 線條圖示。三項保持同一群組，窄視窗可換行，保留完整文字及 US$3／杯。
+- 意見回饋沿用商店支援頁 https://github.com/jasonwang-tw/PageKit/issues；評價連到公開商店實際「查看所有評論」連結 https://chromewebstore.google.com/detail/%E9%A0%81%E5%8C%A3-pagekit/iohdhhdpffmlpgkknihlhkbpkaoblmbo/reviews，不附使用者帳號或編輯內容。沒有另設未確認的信箱或表單。
+- 均以原生超連結另開分頁，noopener／noreferrer，明確 title／aria-label 說明目的及另開分頁；不自動送出問題或評價，不附圖片、OCR、分頁網址、Email 或歷史，不新增網路權限／追蹤。保留贊助原網址與自願性，評價無獎勵、無預設星數，也不彈出催評。
+- 對標：PageKit 既有贊助入口（可存取名稱、焦點、hover 與不影響文件），daisyUI ghost button，以及 Chrome 商店公開評論頁；驗收桌面、1000px 與 680px 斷點、320px、深淺色、Tab／Enter／焦點、錯誤與 OCR 載入狀態、打開新頁後原圖／標註／文字／剪貼簿不被改寫。
+- 三庫前輪已核對：靈感庫沒有直接適用的頁尾配置；PageKit 專案入口與贊助紀錄為既有規範，Skills 庫有 chrome-extension-dev／test-chrome。本次沿用已選框架，不新增 UI Kit。再次查核 GitHub [daisyUI](https://github.com/saadeghi/daisyui)（MIT），Lucide message-square／star 官方 SVG（ISC，授權保留於 icons/LUCIDE-LICENSE.txt）。優點是既有封裝與主題一致、零新增依賴；外部頁面仍受服務、網路及帳號狀態影響。
+- hover／focus 沿用 120ms 色彩微互動，支援 prefers-reduced-motion；不增加進場或延遲動畫，不阻擋核心操作。Chrome 商店 [Spam and Abuse](https://developer.chrome.com/docs/webstore/program-policies/spam-and-abuse) 為評價入口的政策依據。
+
 ## 1.9.0 OCR 結果朗讀（2026-11-23；使用者已確認）
 
 | 問題 | 已選定行為 |
