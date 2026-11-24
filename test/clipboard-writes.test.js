@@ -55,3 +55,38 @@ test('排隊中的舊辨識在視窗關閉或取消後，不再寫入剪貼簿',
   assert.equal(await automatic, false);
   assert.deepEqual(writes, []);
 });
+
+test('自動圖片編碼期間的手動複製文字優先，不會稍後被原圖覆蓋', async () => {
+  const encoding = deferred(), writes = [];
+  const clipboard = clipboardWrites({ writeText: async t => writes.push(t), writeImage: async p => writes.push(await p) });
+  const automatic = clipboard.copyImage(encoding.promise, { automaticRevision: clipboard.revision });
+  await Promise.resolve();
+  const manual = clipboard.copyText('manual OCR text'); encoding.resolve('automatic PNG');
+  assert.equal(await automatic, false); await manual;
+  assert.deepEqual(writes, ['manual OCR text']);
+});
+test('自動圖片排隊或編碼期間關閉設定／換圖時，不寫入過期圖片', async () => {
+  for (const duringEncoding of [false, true]) {
+    const encoding = deferred(), writes = []; let current = true;
+    const clipboard = clipboardWrites({ writeText: async t => writes.push(t), writeImage: async p => writes.push(await p) });
+    const automatic = clipboard.copyImage(encoding.promise, { automaticRevision: clipboard.revision, isCurrent: () => current });
+    if (duringEncoding) await Promise.resolve();
+    current = false; encoding.resolve('old screenshot');
+    assert.equal(await automatic, false); assert.deepEqual(writes, []);
+  }
+});
+test('已開始的自動圖片寫入完成後，使用者手動圖片仍是最後寫入內容', async () => {
+  const started = deferred(), release = deferred(), writes = [];
+  const clipboard = clipboardWrites({ writeText: async t => writes.push(t), writeImage: async p => { const value = await p; if(value === 'auto'){started.resolve();await release.promise;}writes.push(value); } });
+  const automatic = clipboard.copyImage(Promise.resolve('auto'), { automaticRevision: clipboard.revision }); await started.promise;
+  const manual = clipboard.copyImage(Promise.resolve('annotated image')); release.resolve();
+  await Promise.all([automatic, manual]); assert.deepEqual(writes, ['auto', 'annotated image']);
+});
+
+test('原生文字選取的複製意圖會取消等待中的自動圖片，不讀寫文字資料', async () => {
+  const encoding = deferred(), writes = [];
+  const clipboard = clipboardWrites({ writeText: async t => writes.push(t), writeImage: async p => writes.push(await p) });
+  const automatic = clipboard.copyImage(encoding.promise, { automaticRevision: clipboard.revision });
+  await Promise.resolve(); clipboard.manualCopy(); encoding.resolve('old PNG');
+  assert.equal(await automatic, false); assert.deepEqual(writes, []);
+});

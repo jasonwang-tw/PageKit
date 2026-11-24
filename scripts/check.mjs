@@ -73,7 +73,7 @@ for (const [path, hash] of Object.entries(cutout.assets)) {
 }
 for (const path of ['cutout-model-store.js','cutout-model-download.js','cutout-controls.js','cutout-worker.js','cutout-pixels.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
 for (const path of ['translation-controls.js','translation-port.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
-for (const path of ['speech-controls.js','speech-settings.js','speech-session.js','speech-audio.js','image-copy-shortcut.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
+for (const path of ['speech-controls.js','speech-settings.js','speech-session.js','speech-audio.js','image-copy-shortcut.js','capture-settings.js']) assert.ok(existsSync(resolve(root,'ocr',path)));
 for (const id of ['speak-original','speak-translated','speech-settings','speech-language','speech-rate']) assert.ok(editorHtml.includes(`id="${id}"`));
 assert.ok(existsSync(resolve(root,'ocr/model-services.js')));
 assert.ok(existsSync(resolve(root,'ocr/brush-cursor.js')));

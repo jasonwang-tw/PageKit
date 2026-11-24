@@ -21,7 +21,7 @@
         <button id="import-image" class="btn btn-sm btn-outline" disabled title="匯入圖片，或點圖片後按 Ctrl+V／Cmd+V 貼上取代"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></svg><span>匯入圖片</span></button>
         <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="選擇本機圖片">
         <button id="shortcuts" class="btn btn-sm btn-outline" title="在瀏覽器設定自訂截圖快捷鍵">設定快捷鍵</button>
-        <button id="open-model-services" class="btn btn-sm btn-outline" aria-haspopup="dialog" aria-controls="model-services-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3m4 0h9M4 17h9m4 0h3"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg><span>模型與服務管理</span><span id="model-services-activity" class="badge badge-sm" role="status" hidden>下載中</span></button>
+        <button id="open-model-services" class="btn btn-sm btn-outline" aria-haspopup="dialog" aria-controls="model-services-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3m4 0h9M4 17h9m4 0h3"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg><span>設定管理</span><span id="model-services-activity" class="badge badge-sm" role="status" hidden>下載中</span></button>
         <button id="copy-image" title="滑鼠在圖片區且沒有選取或其他控制項焦點時，可按 Ctrl+C／Cmd+C 複製圖片" class="btn btn-sm btn-outline" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 21H5a2 2 0 0 1-2-2V8"/></svg><span>複製圖片</span></button>
         <button id="save-image" class="btn btn-sm btn-primary" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/></svg><span>下載 PNG</span></button>
       </div>
@@ -80,7 +80,7 @@
         <div id="fullpage-ocr-controls" class="fullpage-ocr-controls" hidden><p>整頁圖片先保留原尺寸供編輯。可框選文字區辨識，或依序辨識整頁；縮放不會重新辨識。</p><div class="scope-actions"><button id="select-ocr-region" class="btn btn-sm btn-primary" aria-pressed="false" disabled>框選文字辨識</button><button id="recognize-page" class="btn btn-sm btn-outline" disabled>辨識整頁</button></div></div>
         <button id="stop-recognition" class="btn btn-sm btn-outline" hidden>停止辨識</button>
         <div class="speech-field-heading"><label class="field-label" for="text">辨識原文</label><p id="speech-original-status" class="speech-status" role="status" aria-live="polite"></p><div class="speech-icon-actions"><button id="speak-original" class="btn btn-sm btn-ghost speech-icon-button" type="button" disabled aria-pressed="false" aria-label="朗讀辨識原文" title="朗讀辨識原文"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><button id="speech-settings-original" class="btn btn-sm btn-ghost speech-icon-button" type="button" data-speech-settings popovertarget="speech-settings" aria-controls="speech-settings" aria-haspopup="dialog" aria-expanded="false" aria-label="朗讀設定（共用）" title="朗讀設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.6 3-.5 2.1-1.5.9-2.1-.6-2.4 4.2 1.6 1.5v1.8l-1.6 1.5 2.4 4.2 2.1-.6 1.5.9.5 2.1h4.8l.5-2.1 1.5-.9 2.1.6 2.4-4.2-1.6-1.5v-1.8l1.6-1.5-2.4-4.2-2.1.6-1.5-.9-.5-2.1Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <textarea class="textarea textarea-bordered result-text" id="text" placeholder="截圖載入後自動辨識，完成後自動複製。&#10;辨識結果可在這裡編輯。" spellcheck="false"></textarea>
+        <textarea class="textarea textarea-bordered result-text" id="text" placeholder="截圖載入後自動辨識。&#10;按「複製文字」才複製結果。" spellcheck="false"></textarea>
         <div class="tool-style-popover speech-settings-popover card card-border" id="speech-settings" popover="auto" role="dialog" aria-labelledby="speech-settings-title"><h3 id="speech-settings-title">朗讀設定</h3><div class="ocr-options">
           <label class="option-field" for="speech-language"><span>朗讀語言</span><select id="speech-language" class="select select-sm"><option value="auto">自動判斷</option></select></label>
           <label class="option-field" for="speech-rate"><span>語速</span><span class="speech-rate-control"><input id="speech-rate" class="range range-primary range-sm" type="range" min="0.5" max="2" step="0.25" value="1" aria-valuetext="1 倍"><output id="speech-rate-value" for="speech-rate">1 倍</output></span></label>
@@ -105,13 +105,13 @@
             <label class="check-option" title="改善斜體中文誤辨；關閉後使用原始辨識結果"><input class="checkbox checkbox-sm" id="cjk-recovery" type="checkbox" checked> 斜體中文校正</label>
             <label class="check-option" id="uncertain-label" hidden title="還原被略過的疑似圖案短字，方便對照原圖核對"><input class="checkbox checkbox-sm" id="include-uncertain" type="checkbox"> 顯示低可信度候選</label>
             <p id="enhanced-note" hidden>加強引擎自動辨識中英文，保留原圖色彩；支援自動排列與雙欄，不套用內建引擎的底色處理或斜體校正。</p>
-            <p>調整選項後會自動重新辨識並複製文字。</p>
+            <p>調整選項後會自動重新辨識；按「複製文字」才複製結果。</p>
           </div>
         </details>
         <details class="help-section"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01"/></svg>操作說明</summary><div>
           <p>文字：點圖片任意位置輸入，Enter 完成、Shift+Enter 換行；點既有文字可編輯，拖曳可移動。</p>
           <p>編號：點圖片依序新增，選取後按 Delete／Backspace 或「刪除選取」移除；Ctrl+Z 復原、Ctrl+Shift+Z 重做。</p>
-          <p>OCR 使用原始截圖，不包含標註；成功後自動複製。編輯結果後可再按「複製文字」。</p>
+          <p>OCR 使用原始截圖，不包含標註；結果不會自動複製。需要文字時請按「複製文字」。截圖圖片預設自動複製，可在「設定管理」關閉；新增標註後請再複製圖片。</p>
           <p>純英文圖片可選「英文」；雙欄圖文可選「雙欄圖文」，淺底比較圖可選「圖示／比較圖」。浮層遮住、重疊或已缺失的字無法還原，請對照原圖核對。</p>
           <p>截圖與標註僅留在目前視窗，關閉後不保留；按「下載 PNG」才另存圖片。</p>
         </div></details>
@@ -154,9 +154,10 @@
   </dialog>
   <dialog id="model-services-dialog" class="modal model-services-dialog" aria-labelledby="model-services-title" aria-describedby="model-services-description">
     <div class="modal-box model-services-box">
-      <header class="model-services-header"><h2 id="model-services-title">模型與服務管理</h2><form method="dialog"><button class="btn btn-sm btn-ghost" aria-label="關閉模型與服務管理" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></form></header>
-      <p id="model-services-description">本機模型在此下載與刪除；線上翻譯服務不需安裝。</p>
+      <header class="model-services-header"><h2 id="model-services-title">設定管理</h2><form method="dialog"><button class="btn btn-sm btn-ghost" aria-label="關閉設定管理" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></form></header>
+      <p id="model-services-description">管理截圖偏好、本機模型與線上服務；設定儲存在此瀏覽器。</p>
       <div class="model-services-list">
+        <section class="card card-border service-card" aria-labelledby="capture-settings-title"><div class="service-heading"><h3 id="capture-settings-title">截圖設定</h3></div><label class="check-option capture-copy-option" for="auto-copy-screenshot"><input id="auto-copy-screenshot" class="checkbox checkbox-sm" type="checkbox" checked disabled aria-describedby="capture-setting-description capture-setting-status"><span>截圖後自動複製圖片</span></label><p id="capture-setting-description">預設開啟，截圖載入後即可貼上原圖。新增標註後請再按「複製圖片」或 Ctrl+C／Cmd+C；匯入／貼上圖片不觸發自動複製。</p><p id="capture-setting-status" role="status" aria-live="polite">正在讀取設定…</p></section>
         <section class="card card-border service-card" aria-labelledby="builtin-service-title"><div class="service-heading"><h3 id="builtin-service-title">內建 OCR</h3><span class="badge badge-sm complete">已內建</span></div><p class="service-name">Tesseract · 繁中／簡中／英文</p><p>隨擴充功能提供，免另外下載，可離線使用。</p></section>
         <section class="card card-border service-card" id="ocr-model-card" aria-labelledby="ocr-service-title"><div class="service-heading"><h3 id="ocr-service-title">加強 OCR</h3><span id="ocr-model-state" class="badge badge-sm" role="status">檢查中</span></div><p class="service-name">PP-OCRv6 Small · 31.2 MB</p>
           <p id="model-status" role="status">檢查本機模型中…</p>
@@ -174,7 +175,7 @@
       </div>
       <p class="model-services-note">關閉此管理畫面不會取消下載；需要停止時請按「取消下載」。</p>
     </div>
-    <form method="dialog" class="modal-backdrop"><button class="btn" tabindex="-1" aria-label="點背景關閉模型與服務管理">關閉</button></form>
+    <form method="dialog" class="modal-backdrop"><button class="btn" tabindex="-1" aria-label="點背景關閉設定管理">關閉</button></form>
   </dialog>
   <script src="../vendor/ocr/tesseract.min.js"></script>
   <script type="module" src="ocr.js"></script>

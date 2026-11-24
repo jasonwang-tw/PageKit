@@ -1,4 +1,4 @@
-// Serialize writes so a late automatic OCR result cannot replace a newer
+// Serialize writes so a late automatic screenshot cannot replace a newer
 // explicit copy, including when the earlier browser clipboard request is pending.
 export function clipboardWrites({ writeText, writeImage }) {
   let revision = 0;
@@ -10,6 +10,7 @@ export function clipboardWrites({ writeText, writeImage }) {
   }
   return {
     get revision() { return revision; },
+    manualCopy() { revision++; },
     copyText(text, { automaticRevision, isCurrent = () => true } = {}) {
       if (automaticRevision == null) revision++;
       return enqueue(async () => {
@@ -18,11 +19,18 @@ export function clipboardWrites({ writeText, writeImage }) {
         return true;
       });
     },
-    copyImage(snapshot) {
-      revision++;
+    copyImage(snapshot, { automaticRevision, isCurrent = () => true } = {}) {
+      if (automaticRevision == null) revision++;
       // The snapshot is taken at click time; a queued write may run later.
       void snapshot.catch(() => {});
-      return enqueue(() => writeImage(snapshot));
+      return enqueue(async () => {
+        const current = () => isCurrent() && (automaticRevision == null || automaticRevision === revision);
+        if (!current()) return false;
+        const blob = await snapshot;
+        if (!current()) return false;
+        await writeImage(Promise.resolve(blob));
+        return true;
+      });
     }
   };
 }

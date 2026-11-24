@@ -19,6 +19,7 @@ import { cropDocument } from './crop-document.js';
 import { clipboardWrites } from './clipboard-writes.js';
 import { speechControls } from './speech-controls.js';
 import { imageCopyShortcut } from './image-copy-shortcut.js';
+import { captureSettings } from './capture-settings.js';
 
 const $ = id => document.getElementById(id);
 $('version').textContent = `v${chrome.runtime.getManifest().version}`;
@@ -42,26 +43,32 @@ let recognitionFailed = false;
 let interactionMessage = false;
 let captureMode = 'region';
 let ocrRequested = false;
+let sourceRevision = 0;
+let captureCopyState = 'none';
 const annotationLocked = () => importing || Boolean(cutout?.working);
 const clipboard = clipboardWrites({
   writeText: text => navigator.clipboard.writeText(text),
   writeImage: snapshot => navigator.clipboard.write([new ClipboardItem({ 'image/png': snapshot })])
 });
+// Native text selection copies also take priority; never inspect clipboard data.
+const manualCopy = () => clipboard.manualCopy();
+document.addEventListener('copy', manualCopy);
+const settings = captureSettings({ storage: chrome.storage, checkbox: $('auto-copy-screenshot'), message: $('capture-setting-status') });
 const widths = { stroke: 3, highlight: 20 };
 const styles = styleControls({ state: () => ({ tool: editor?.tool || 'pen', color: $('color').value, width: widths[editor?.tool === 'highlight' ? 'highlight' : 'stroke'], fontSize: Number($('text-size').value) }), locked: () => !selected || annotationLocked() || editor?.tool === 'pan' });
 const documentHistory=cropDocument({image,editor:()=>editor,setPreview:value=>cutout.setPreview(value),changed:({imageChanged})=>{
   selected={x:0,y:0,width:image.width,height:image.height};$('dimensions').textContent=`${image.width} × ${image.height}`;fitPreview();
-  if(imageChanged){documentNeedsRecognition=captureMode !== 'fullpage';if(captureMode === 'fullpage')ocrRequested=false;palette.reset();translation.invalidate('裁切範圍已更新，辨識完成後可重新翻譯。');output.value='';$('copy').disabled=true;$('quality-note').hidden=true;scheduleRecognition();}
+  if(imageChanged){sourceRevision++;captureCopyState='none';documentNeedsRecognition=captureMode !== 'fullpage';if(captureMode === 'fullpage')ocrRequested=false;palette.reset();translation.invalidate('裁切範圍已更新，辨識完成後可重新翻譯。');output.value='';$('copy').disabled=true;$('quality-note').hidden=true;scheduleRecognition();}
 }});
 const crop=cropControls({source:()=>selected?image:null,preview:()=>$('screenshot'),locked:()=>busy||importing||Boolean(cutout?.working)||models.downloading,
   beforeOpen:()=>{styles.close();editor?.finishText(true);editor?.cancel();if(pendingRecognition){clearTimeout(pendingRecognition);pendingRecognition=null;documentNeedsRecognition=true;}},
   apply:async plan=>{importing=true;setBusy(busy);try{documentHistory.apply(plan);status(captureMode === 'fullpage' ? '裁切完成，標註可繼續編輯；請重新框選文字區或辨識整頁。' : '裁切完成，標註可繼續編輯；正在準備重新辨識。');}finally{importing=false;setBusy(busy);}},
   afterClose:()=>{if(documentNeedsRecognition)scheduleRecognition();}});
 const management = modelServices();
-const palette = paletteControls({ source: () => selected ? image : null, locked: () => busy || importing || Boolean(cutout?.working), beforeOpen: () => { editor?.finishText(true); editor?.cancel(); } });
+const palette = paletteControls({ source: () => selected ? image : null, locked: () => busy || importing || Boolean(cutout?.working), copyText: text => clipboard.copyText(text), beforeOpen: () => { editor?.finishText(true); editor?.cancel(); } });
 const models = modelControls({ locked: () => busy || importing || Boolean(cutout?.working), changed: () => { setBusy(busy); scheduleRecognition(); }, activityChanged: () => setBusy(busy), openManagement: management.open });
 cutout = cutoutControls({ source: () => image, editor: () => editor, locked: () => busy || importing || models.downloading, changed: () => setBusy(busy), openManagement: management.open });
-translation = translationControls({ source: output, locked: () => busy || importing, changed: () => speech?.render() });
+translation = translationControls({ source: output, locked: () => busy || importing, copyText: text => clipboard.copyText(text), changed: () => speech?.render() });
 speech = speechControls({ source: output, translated: $('translated-text'), target: $('translation-language'), locked: () => busy || importing });
 const viewer = imageViewer({ image, editor: () => editor, selected: () => selected, locked: () => annotationLocked() || crop.isOpen,
   status, choose: rect => { if (busy) return; selected = rect; ocrRequested = true; void recognize(); } });
@@ -112,7 +119,7 @@ function setBusy(value) {
   crop.render();
   viewer.render();
   $('fullpage-ocr-controls').hidden = captureMode !== 'fullpage';
-  output.placeholder = captureMode === 'fullpage' ? '請框選文字區，或按「辨識整頁」。\n辨識結果可在這裡編輯。' : '截圖載入後自動辨識，完成後自動複製。\n辨識結果可在這裡編輯。';
+  output.placeholder = captureMode === 'fullpage' ? '請框選文字區，或按「辨識整頁」。\n按「複製文字」才複製結果。' : '截圖載入後自動辨識。\n按「複製文字」才複製結果。';
   for (const id of ['select-ocr-region', 'recognize-page']) $(id).disabled = locked || !selected || models.downloading || crop.isOpen;
   $('stop-recognition').hidden = !value;
   $('language').disabled = value || enhanced;
@@ -142,7 +149,6 @@ async function recognize() {
   ocrRequested = true;
   translation.invalidate('OCR 更新後，請手動按「翻譯」。');
   const run = ++generation;
-  const clipboardRevision = clipboard.revision;
   recognitionFailed = false;
   interactionMessage = false;
   const enhanced = models.engine === 'enhanced';
@@ -235,7 +241,11 @@ async function recognize() {
         : '本次辨識可信度偏低，複製後請核對；可切換版面、底色或縮小截圖範圍再試。';
       $('quality-note').hidden = !output.value || !needsReview;
       $('copy').disabled = busy || !output.value;
-      if (output.value) await copyResult({ automatic: true, run, clipboardRevision });
+      if (output.value) recognitionStatus(captureCopyState === 'failed'
+        ? '辨識完成；截圖自動複製失敗，請按「複製圖片」重試。文字請按「複製文字」。'
+        : captureCopyState === 'copied'
+        ? '辨識完成，截圖已自動複製；需要文字時請按「複製文字」。'
+        : '辨識完成；按「複製文字」才會複製文字。', captureCopyState === 'failed', true);
       else recognitionStatus('未辨識到文字，請調整範圍或辨識語言後重試', false, true);
     })();
     // A late initialization after cancel/timeout must still release its worker.
@@ -244,7 +254,7 @@ async function recognize() {
   } catch (error) {
     if (run === generation) {
       output.value = parts.filter(Boolean).join('\n\n');
-      recognitionStatus(`${error.message || 'OCR 辨識失敗'}${parts.length ? `；已保留 ${parts.length}/${tiles.length} 區的部分結果，未自動複製。` : '，未自動複製。'}`, true, true);
+      recognitionStatus(`${error.message || 'OCR 辨識失敗'}${parts.length ? `；已保留 ${parts.length}/${tiles.length} 區的部分結果，文字未自動複製。` : '，文字未自動複製。'}`, true, true);
     }
   } finally {
     clearTimeout(timer);
@@ -259,22 +269,18 @@ async function recognize() {
 }
 
 
-async function copyResult({ automatic = false, run, clipboardRevision } = {}) {
+async function copyResult() {
   if (!output.value) return;
   try {
-    const copied = await clipboard.copyText(output.value, automatic ? { automaticRevision: clipboardRevision, isCurrent: () => run === generation } : {});
-    if (run != null && run !== generation) return;
-    if (automatic) recognitionStatus(copied ? '辨識完成，已自動複製，可直接貼上（Ctrl+V／Cmd+V）' : '辨識完成，已保留你複製的圖片；需要文字時請按「複製文字」。', false, true);
-    else status('文字已複製，可直接貼上（Ctrl+V／Cmd+V）');
+    await clipboard.copyText(output.value);
+    status('文字已複製，可直接貼上（Ctrl+V／Cmd+V）');
   } catch {
-    if (run != null && run !== generation) return;
-    if (!automatic && document.hasFocus()) {
+    if (document.hasFocus()) {
       output.focus();
       output.select();
     }
     const message = '辨識文字尚未複製，請點「複製文字」或選取結果後按 Ctrl+C／Cmd+C';
-    if (automatic) recognitionStatus(message, false, true);
-    else status(message, true);
+    status(message, true);
   }
 }
 $('copy').addEventListener('click', () => { void copyResult(); });
@@ -345,6 +351,29 @@ function imageBlob() {
   editor?.finishText(true);
   return new Promise((resolve, reject) => $('screenshot').toBlob(blob => blob ? resolve(blob) : reject(new Error('圖片產生失敗')), 'image/png'));
 }
+async function copyScreenshotAutomatically() {
+  if (!settings.enabled) return;
+  const source = sourceRevision, preference = settings.revision;
+  const isCurrent = () => source === sourceRevision && settings.enabled && preference === settings.revision;
+  const automaticRevision = clipboard.revision;
+  captureCopyState = 'pending';
+  // Read the original image directly: do not finish/cancel a concurrent text draft.
+  const snapshot = new Promise((resolve, reject) => image.toBlob(blob => blob ? resolve(blob) : reject(new Error('圖片產生失敗')), 'image/png'));
+  try {
+    const copied = await clipboard.copyImage(snapshot, { automaticRevision, isCurrent });
+    if (!isCurrent()) return;
+    if (automaticRevision !== clipboard.revision) { captureCopyState = 'superseded'; return; }
+    captureCopyState = copied ? 'copied' : 'superseded';
+    if (copied) status(captureMode === 'fullpage'
+      ? '截圖已自動複製，可直接貼上；請框選文字區，或按「辨識整頁」。'
+      : '截圖已自動複製，可直接貼上；OCR 文字需按「複製文字」才複製。');
+  } catch {
+    if (!isCurrent()) return;
+    if (automaticRevision !== clipboard.revision) { captureCopyState = 'superseded'; return; }
+    captureCopyState = 'failed';
+    status('截圖自動複製失敗，請按「複製圖片」重試，或下載 PNG；OCR 文字不會自動複製。', true);
+  }
+}
 async function copyImage() {
   if ($('copy-image').disabled) return;
   try {
@@ -378,6 +407,7 @@ $('import-image').addEventListener('click', () => $('image-file').click());
 const imageImportLocked = () => busy || importing || cutout.working || models.downloading || !initialized;
 async function importImage(file, pasted = false) {
   if (!file || imageImportLocked()) return;
+  sourceRevision++; captureCopyState = 'none';
   let bitmap, loaded = false;
   try {
     validateImportedImage(file);
@@ -430,6 +460,9 @@ chrome.commands.getAll().then(commands => {
   $('shortcuts').textContent = shortcut ? `快捷鍵：${shortcut}` : '設定截圖快捷鍵';
 }).catch(() => {});
 window.addEventListener('pagehide', () => {
+  sourceRevision++;
+  settings.destroy();
+  document.removeEventListener('copy', manualCopy);
   copyShortcut.destroy();
   document.removeEventListener('paste', pasteImage);
   viewer.destroy();
@@ -452,7 +485,7 @@ window.addEventListener('pagehide', () => {
 });
 
 async function load() {
-  await Promise.all([models.initialize(), cutout.initialize()]);
+  await Promise.all([models.initialize(), cutout.initialize(), settings.initialize()]);
   initialized = true;
   setBusy(false);
   const error = new URLSearchParams(location.search).get('error');
@@ -490,6 +523,7 @@ async function load() {
     selected = { x: 0, y: 0, width: image.width, height: image.height };
     attachEditor();
   } finally { importing = false; setBusy(false); }
+  void copyScreenshotAutomatically();
   if (captureMode === 'fullpage') status('整頁截圖已載入，保留原始像素；請框選文字區辨識，或選「辨識整頁」。');
   else await recognize();
 }
