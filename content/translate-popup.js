@@ -2,7 +2,7 @@
 // Shadow DOM 隔離翻譯懸浮視窗，避免頁面 CSS 污染
 
 // 防止 executeScript 重複注入時初始化兩次；版本變更時允許重新初始化。
-var SELECTION_TRANSLATE_SCRIPT_VERSION = '1.12.2-pagekit';
+var SELECTION_TRANSLATE_SCRIPT_VERSION = '1.13.0-pagekit';
 if (window.__selectionTranslateLoaded === SELECTION_TRANSLATE_SCRIPT_VERSION) {
   // 已有 listener，不重複初始化
 } else {

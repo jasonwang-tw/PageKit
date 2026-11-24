@@ -1,6 +1,6 @@
 import { paletteSize, PALETTE_COUNTS } from './palette-analysis.js';
 
-export function paletteControls({ source, locked, beforeOpen }) {
+export function paletteControls({ source, locked, beforeOpen, copyText = text => navigator.clipboard.writeText(text) }) {
   const $ = id => document.getElementById(id);
   const dialog = $('palette-dialog'), launcher = $('analyze-palette'), count = $('palette-count');
   const results = $('palette-results'), message = $('palette-status');
@@ -19,7 +19,7 @@ export function paletteControls({ source, locked, beforeOpen }) {
       const share = document.createElement('span'); share.className = 'palette-share'; share.textContent = `約 ${percent.toFixed(1)}%`;
       swatch.addEventListener('click', async () => {
         const run = generation;
-        try { await navigator.clipboard.writeText(hex); if (run === generation && dialog.open) note(`已複製 ${hex}，可直接貼上`); }
+        try { await copyText(hex); if (run === generation && dialog.open) note(`已複製 ${hex}，可直接貼上`); }
         catch { if (run === generation && dialog.open) note('無法複製，請選取下方 HEX 色碼後按 Ctrl+C／Cmd+C', true); }
       });
       card.append(swatch, code, channels, share); results.append(card);

@@ -1,6 +1,6 @@
 # 專案規範
 
-- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.12.2。
+- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.13.0。
 - 顯示名稱與新資源使用 PageKit。舊分頁使用的 `__easy*` 狀態與圖片座標通道屬相容識別，更名時保留以避免重複監聽或跨框架中斷。
 - 修改前先讀 README.md 與本檔。Git commit 訊息使用繁體中文。
 - 提交、推送、建立遠端分支及發布只能使用 GitHub App connector；不可使用 git add／commit／push 或 gh 作為替代。
@@ -33,3 +33,5 @@
 - 1.12.0 圖片Ctrl+C／Cmd+C依docs/UI_INVENTORY.md，僅在圖片為隱含目標時使用同一copyImage／clipboardWrites管線；文字選取、選中物件、控制項焦點與操作中狀態優先，不得覆蓋原生文字複製或OCR期間的手動圖片優先權。
 
 - 1.12.2 朗讀圖示與共用齒輪Popover依docs/UI_INVENTORY.md，取代舊下方文字按鈕／details；維持可存取名稱、停止狀態、焦點與共享語言語速，不改音訊服務或剪貼簿。
+
+- 1.13.0 截圖自動複製與設定依 docs/UI_INVENTORY.md：預設自動複製原圖，可本機儲存開關；OCR 永不自動複製文字。自動工作必須讓位給手動複製／換圖／關閉，不讀剪貼簿、不加權限。

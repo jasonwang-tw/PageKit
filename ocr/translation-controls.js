@@ -1,6 +1,6 @@
 import { TRANSLATION_LANGUAGES, validateOcrTranslation } from '../translation-service.js';
 
-export function translationControls({ source, locked, changed = () => {} }) {
+export function translationControls({ source, locked, changed = () => {}, copyText = text => navigator.clipboard.writeText(text) }) {
   const $ = id => document.getElementById(id);
   const target = $('translation-language'), result = $('translated-text');
   for (const [code, name] of TRANSLATION_LANGUAGES) { const option = document.createElement('option'); option.value = code; option.textContent = name; target.append(option); }
@@ -56,7 +56,7 @@ export function translationControls({ source, locked, changed = () => {} }) {
   $('copy-translation').addEventListener('click', async () => {
     if (!result.value || port || locked() || snapshot !== source.value || requestTarget !== target.value) return;
     const text = result.value;
-    try { await navigator.clipboard.writeText(text); if (!closing && result.value === text && snapshot === source.value) message('譯文已複製，可直接貼上。'); }
+    try { await copyText(text); if (!closing && result.value === text && snapshot === source.value) message('譯文已複製，可直接貼上。'); }
     catch { if (!closing && result.value === text) { result.focus(); result.select(); message('無法自動複製，請選取譯文後按 Ctrl+C／Cmd+C。', true); } }
   });
   render();

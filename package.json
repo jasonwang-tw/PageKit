@@ -1,11 +1,11 @@
 {
   "name": "pagekit",
-  "version": "1.12.2",
+  "version": "1.13.0",
   "private": true,
   "type": "module",
   "description": "頁匣 PageKit：瀏覽器效率工具箱，提供即時翻譯、截圖標註與本機 OCR",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "check": "node scripts/check.mjs"
   }
 }
