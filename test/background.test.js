@@ -20,14 +20,15 @@ globalThis.chrome = {
   },
   action: { onClicked: event('action') },
   commands: { onCommand: event('command') },
-  windows: { create: async data => { created.push(data); } },
+  windows: { create: async data => { created.push(data); }, getAll: async () => [], update: async () => {} },
   scripting: { executeScript: async data => { injections.push(data); return [{ result: selectionResult }]; } },
-  storage: { session: {
+  storage: { local: { get: async () => ({}) }, session: {
     get: async () => session,
     set: async data => { Object.assign(session, data); },
     remove: async keys => { for (const key of [keys].flat()) delete session[key]; }
   } },
   tabs: {
+    update: async () => {},
     sendMessage: async (...args) => { messages.push(args); return null; },
     query: async () => [activeTab],
     captureVisibleTab: async (...args) => { captures.push(args); return 'data:image/png;base64,AAAA'; },
@@ -201,6 +202,35 @@ test('取消框選移除暫存，不建立任何視窗', async () => {
   assert.equal((await send({ type: 'REGION_CAPTURE_CANCEL', captureId }, { id: chrome.runtime.id, tab: activeTab, frameId: 0 })).success, true);
   assert.deepEqual(session, {});
   assert.equal(created.length, 0);
+});
+
+test('連續快捷鍵截圖共用 popup，取消下一次框選不清除已完成工作', async () => {
+  let view;
+  const navigations = [];
+  mock.method(chrome.windows, 'create', async props => {
+    created.push(props);
+    view = { ...props, id: 50, tabs: [{ id: 51, url: props.url }] };
+    return view;
+  });
+  mock.method(chrome.windows, 'getAll', async () => view ? [structuredClone(view)] : []);
+  mock.method(chrome.tabs, 'update', async (id, props) => { assert.equal(id, 51); navigations.push(props); view.tabs[0].url = props.url; });
+  const sender = { id: chrome.runtime.id, tab: activeTab, frameId: 0 };
+  const complete = async () => {
+    await listeners.command('capture-region', activeTab);
+    const captureId = session['region:3'].captureId;
+    return send({ type: 'REGION_CAPTURE_COMPLETE', captureId, rect: { x: 0, y: 0, width: 200, height: 100 }, viewport: { width: 800, height: 600 } }, sender);
+  };
+  assert.equal((await complete()).success, true);
+  assert.equal((await complete()).success, true);
+  assert.equal(created.length, 1); assert.equal(navigations.length, 1);
+  assert.ok(new URL(navigations[0].url).searchParams.has('editor'));
+  const loadedUrl = view.tabs[0].url;
+  await listeners.command('capture-region', activeTab);
+  const captureId = session['region:3'].captureId;
+  assert.equal((await send({ type: 'REGION_CAPTURE_CANCEL', captureId }, sender)).success, true);
+  assert.equal(view.tabs[0].url, loadedUrl);
+  assert.equal(created.length, 1); assert.equal(navigations.length, 1);
+  assert.equal(Object.keys(session).filter(key => key.startsWith('ocr:')).length, 1);
 });
 
 test('拒絕不同分頁、frame、過期識別及無效框選座標', async () => {

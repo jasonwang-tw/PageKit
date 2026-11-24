@@ -6,12 +6,17 @@ import { installCutoutService } from './ocr/cutout-model-download.js';
 import { installOcrTranslation } from './ocr/translation-port.js';
 import { capturePage, captureVisible } from './page-capture.js';
 import { captureAssets } from './capture-transfer.js';
+import { editorWindows } from './editor-window.js';
 
 installModelService();
 installCutoutService();
 installOcrTranslation();
 const loadUiStyles = createUiStyleLoader(path => chrome.runtime.getURL(path));
 const assets = captureAssets(chrome.runtime);
+const editorWindow = editorWindows(chrome, { discard: async id => {
+  assets.remove(id);
+  await chrome.storage.session.remove(`ocr:${id}`);
+} });
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
@@ -27,10 +32,6 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({ id: 'support-pagekit', title: '請我喝杯咖啡（US$3／杯）', contexts: ['action'] });
   });
 });
-
-function editorWindow(url, incognito = false) {
-  return chrome.windows.create({ url: chrome.runtime.getURL(url), type: 'popup', width: 1200, height: 820, focused: true, incognito });
-}
 
 async function openEditor(job, incognito = false) {
   const id = crypto.randomUUID();

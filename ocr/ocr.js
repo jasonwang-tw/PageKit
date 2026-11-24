@@ -19,7 +19,7 @@ import { cropDocument } from './crop-document.js';
 import { clipboardWrites } from './clipboard-writes.js';
 import { speechControls } from './speech-controls.js';
 import { imageCopyShortcut } from './image-copy-shortcut.js';
-import { captureSettings } from './capture-settings.js';
+import { captureSettings, singleWindowSettings } from './capture-settings.js';
 
 const $ = id => document.getElementById(id);
 $('version').textContent = `v${chrome.runtime.getManifest().version}`;
@@ -54,6 +54,12 @@ const clipboard = clipboardWrites({
 const manualCopy = () => clipboard.manualCopy();
 document.addEventListener('copy', manualCopy);
 const settings = captureSettings({ storage: chrome.storage, checkbox: $('auto-copy-screenshot'), message: $('capture-setting-status') });
+const windowSettings = singleWindowSettings({ storage: chrome.storage, checkbox: $('single-editor-window'), message: $('window-setting-status') });
+const captureError = (message, sender) => {
+  if (sender.id === chrome.runtime.id && !sender.tab && message.type === 'CAPTURE_ERROR' && typeof message.error === 'string') status(message.error.slice(0, 1000), true);
+  return false;
+};
+chrome.runtime.onMessage.addListener(captureError);
 const widths = { stroke: 3, highlight: 20 };
 const styles = styleControls({ state: () => ({ tool: editor?.tool || 'pen', color: $('color').value, width: widths[editor?.tool === 'highlight' ? 'highlight' : 'stroke'], fontSize: Number($('text-size').value) }), locked: () => !selected || annotationLocked() || editor?.tool === 'pan' });
 const documentHistory=cropDocument({image,editor:()=>editor,setPreview:value=>cutout.setPreview(value),changed:({imageChanged})=>{
@@ -462,6 +468,8 @@ chrome.commands.getAll().then(commands => {
 window.addEventListener('pagehide', () => {
   sourceRevision++;
   settings.destroy();
+  windowSettings.destroy();
+  chrome.runtime.onMessage.removeListener(captureError);
   document.removeEventListener('copy', manualCopy);
   copyShortcut.destroy();
   document.removeEventListener('paste', pasteImage);
@@ -485,7 +493,7 @@ window.addEventListener('pagehide', () => {
 });
 
 async function load() {
-  await Promise.all([models.initialize(), cutout.initialize(), settings.initialize()]);
+  await Promise.all([models.initialize(), cutout.initialize(), settings.initialize(), windowSettings.initialize()]);
   initialized = true;
   setBusy(false);
   const error = new URLSearchParams(location.search).get('error');
