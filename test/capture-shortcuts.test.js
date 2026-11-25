@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { captureShortcuts } from '../ocr/capture-shortcuts.js';
 
 function setup(getAll) {
-  const target = new EventTarget(), opener = new EventTarget(), region = {}, desktop = {}, header = {};
-  const controls = captureShortcuts({ commands: { getAll }, target, opener, region, desktop, header });
-  return { controls, target, opener, region, desktop, header };
+  const target = new EventTarget(), opener = new EventTarget(), region = {}, desktop = {};
+  const controls = captureShortcuts({ commands: { getAll }, target, opener, region, desktop });
+  return { controls, target, opener, region, desktop };
 }
 test('分別顯示瀏覽器實際綁定，未設定第二組時明示且不更改按鍵', async () => {
   let calls = 0;
   const s = setup(async () => { calls++; return [{ name: 'capture-region', shortcut: 'Alt+S' }, { name: 'capture-desktop', shortcut: '' }]; });
-  await s.controls.initialize(); assert.equal(s.region.textContent, 'Alt+S'); assert.equal(s.desktop.textContent, '未設定'); assert.match(s.header.title, /桌面截圖：未設定/); assert.equal(calls, 1);
+  await s.controls.initialize(); assert.equal(s.region.textContent, 'Alt+S'); assert.equal(s.desktop.textContent, '未設定'); assert.equal(calls, 1);
 });
 test('回到視窗或開設定時重新讀取兩組按鍵，包含使用者清除綁定', async () => {
   let bindings = [{ name: 'capture-region', shortcut: 'Alt+S' }, { name: 'capture-desktop', shortcut: 'Alt+D' }];

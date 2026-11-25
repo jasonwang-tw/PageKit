@@ -1,5 +1,5 @@
 // Read actual Chrome bindings; key assignment stays in native shortcut settings.
-export function captureShortcuts({ commands, region, desktop, header, opener, target = window }) {
+export function captureShortcuts({ commands, region, desktop, opener, target = window }) {
   let closed = false, revision = 0;
   async function refresh() {
     const attempt = ++revision;
@@ -9,13 +9,9 @@ export function captureShortcuts({ commands, region, desktop, header, opener, ta
       const key = name => all.find(item => item.name === name)?.shortcut || '';
       const web = key('capture-region'), screen = key('capture-desktop');
       region.textContent = web || '未設定'; desktop.textContent = screen || '未設定';
-      header.textContent = web ? `網頁：${web}` : '設定截圖快捷鍵';
-      header.title = `網頁框選：${web || '未設定'}；桌面截圖：${screen || '未設定'}。點擊分別設定。`;
     } catch {
       if (closed || attempt !== revision) return;
       region.textContent = desktop.textContent = '無法讀取';
-      header.textContent = '設定截圖快捷鍵';
-      header.title = '在瀏覽器分別設定網頁框選與桌面截圖快捷鍵';
     }
   }
   target.addEventListener('focus', refresh); opener.addEventListener('click', refresh);

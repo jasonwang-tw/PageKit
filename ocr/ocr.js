@@ -61,7 +61,7 @@ const manualCopy = () => clipboard.manualCopy();
 document.addEventListener('copy', manualCopy);
 const settings = captureSettings({ storage: chrome.storage, checkbox: $('auto-copy-screenshot'), message: $('capture-setting-status') });
 const windowSettings = singleWindowSettings({ storage: chrome.storage, checkbox: $('single-editor-window'), message: $('window-setting-status') });
-const shortcutSettings = captureShortcuts({ commands: chrome.commands, region: $('region-shortcut'), desktop: $('desktop-shortcut'), header: $('shortcuts'), opener: $('open-model-services') });
+const shortcutSettings = captureShortcuts({ commands: chrome.commands, region: $('region-shortcut'), desktop: $('desktop-shortcut'), opener: $('open-model-services') });
 const captureError = (message, sender, respond) => {
   if (sender.id === chrome.runtime.id && !sender.tab && message.type === 'START_DESKTOP_CAPTURE') {
     respond({ ready: desktopReady });
@@ -439,7 +439,7 @@ async function openCaptureShortcuts() {
     if (!response?.success) throw new Error(response?.error || '無法開啟設定');
   } catch { status('請在 chrome://extensions/shortcuts（Edge：edge://extensions/shortcuts）設定快捷鍵', true); }
 }
-for (const id of ['shortcuts', 'manage-capture-shortcuts']) $(id).addEventListener('click', openCaptureShortcuts);
+$('manage-capture-shortcuts').addEventListener('click', openCaptureShortcuts);
 $('import-image').addEventListener('click', () => $('image-file').click());
 const imageImportLocked = () => busy || importing || cutout.working || models.downloading || desktop?.working || !initialized;
 async function importImage(file, pasted = false, desktopCapture = null) {

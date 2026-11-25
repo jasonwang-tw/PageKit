@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "頁匣 PageKit",
   "short_name": "PageKit",
-  "version": "1.17.1",
+  "version": "1.17.2",
   "description": "頁匣 PageKit：瀏覽器效率工具箱，提供即時翻譯、截圖標註、圖片文字辨識與複製。",
   "permissions": [
     "activeTab",

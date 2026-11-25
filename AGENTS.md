@@ -1,6 +1,6 @@
 # 專案規範
 
-- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.17.1。
+- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.17.2。
 - 顯示名稱與新資源使用 PageKit。舊分頁使用的 `__easy*` 狀態與圖片座標通道屬相容識別，更名時保留以避免重複監聽或跨框架中斷。
 - 修改前先讀 README.md 與本檔。Git commit 訊息使用繁體中文。
 - 提交、推送、建立遠端分支及發布只能使用 GitHub App connector；不可使用 git add／commit／push 或 gh 作為替代。
@@ -46,6 +46,7 @@
 - 1.16.3 辨識引擎與重新／停止辨識按鈕同列依 docs/UI_INVENTORY.md，不改辨識行為；來源／規範／QA預覽位於 `PageKit-1.16.3-engine-row-source-20261125.zip`，詳同夾「2026-11-25｜1.16.3辨識引擎與按鈕同列.md」。
 - 1.16.4依使用者實機回饋取消桌面擷取最小化與繪製回呼依賴，分享後直接取一幀、停止全部tracks，再載入並聚焦原編輯器；不得改回自動最小化或要求第二次快捷鍵。細節依docs/DESKTOP_CAPTURE.md的1.16.4覆蓋規格；來源／QA備份為 `PageKit-1.16.4-direct-desktop-source-20261125.zip`，詳同夾「2026-11-25｜1.16.4分享後直接取圖.md」。
 - 1.17.0依使用者要求拆分capture-region／capture-desktop兩組指令，保留原網頁綁定，桌面預設不指定按鍵，僅由原生Chrome管理；不得重新引入共用模式或讀寫舊mode偏好。規格依docs/DESKTOP_CAPTURE.md及UI_INVENTORY.md，備份為 `PageKit-1.17.0-independent-shortcuts-source-20261125.zip`，詳同夾「2026-11-25｜1.17.0兩組獨立截圖快捷鍵.md」。
-- 最新1.17.1視窗／整頁截圖載入後均不自動OCR；與桌面共用按需辨識入口，首次前的設定／裁切也不自動啟動。網頁框選、圖片右鍵、匯入／貼上維持原行為，依docs/UI_INVENTORY.md與CAPTURE_MODES.md；備份為 `PageKit-1.17.1-manual-capture-ocr-source-20261125.zip`，詳同夾「2026-11-25｜1.17.1視窗整頁預設不辨識.md」。
+- 1.17.1視窗／整頁截圖載入後均不自動OCR；與桌面共用按需辨識入口，首次前的設定／裁切也不自動啟動。網頁框選、圖片右鍵、匯入／貼上維持原行為，依docs/UI_INVENTORY.md與CAPTURE_MODES.md；備份為 `PageKit-1.17.1-manual-capture-ocr-source-20261125.zip`，詳同夾「2026-11-25｜1.17.1視窗整頁預設不辨識.md」。
+- 1.17.2依使用者要求移除頁首重複快捷鍵按鈕，狀態及兩組按鍵設定統一保留設定管理；不改其他頁首按鈕或既有綁定。規格依docs/UI_INVENTORY.md；發行階段來源為同一pCloud專案夾 `PageKit-1.17.2-release-source-20261125.zip`，實際Git／商店狀態以「2026-11-25｜1.17.2發行與商店更新.md」讀回校驗紀錄為準。
 
 - 1.16.0 使用者已確認增加桌面／應用程式截圖，依 docs/DESKTOP_CAPTURE.md；此為舊「不新增桌面擷取權限」的已授權擴充。只用選用 desktopCapture，於擴充編輯頁開啟原生 picker 並取一幀，所有離開／取消／逾時皆釋放串流。保留 capture-region 與使用者快捷鍵，桌面 OCR 預設按需；不得加入音訊、持續錄影、上傳或原生 App 依賴。
