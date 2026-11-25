@@ -43,11 +43,29 @@ afterEach(() => {
 
 test('安裝時註冊翻譯、截圖與圖片 OCR 選單', () => {
   listeners.installed();
-  assert.equal(menus.length, 8);
+  assert.equal(menus.length, 9);
   assert.equal(menus.find(menu=>menu.id==='capture-visible').title, '視窗截圖');
   assert.equal(menus.find(menu=>menu.id==='capture-fullpage').title, '整頁截圖');
   assert.equal(menus[0].id, 'instant-translate');
   assert.deepEqual(menus[0].contexts, ['selection']);
+});
+
+test('桌面快捷鍵及圖示右鍵進入桌面模式，不注入網頁或擷取瀏覽器', async () => {
+  mock.method(chrome.storage.local, 'get', async () => ({ pagekitShortcutCaptureMode: 'desktop' }));
+  await listeners.command('capture-desktop', undefined);
+  assert.match(created[0].url, /ocr\/ocr.html\?desktop=1$/); assert.equal(captures.length, 0); assert.equal(injections.length, 0);
+  await listeners.context({ menuItemId: 'capture-desktop' }, { incognito: true });
+  assert.equal(created[1].incognito, true); assert.match(created[1].url, /desktop=1/);
+});
+test('舊桌面模式偏好不再把網頁快捷鍵導向桌面，兩組指令固定分開', async () => {
+  mock.method(chrome.storage.local, 'get', async () => ({ pagekitShortcutCaptureMode: 'desktop' }));
+  await listeners.command('capture-region', activeTab);
+  assert.equal(created.length, 0); assert.equal(captures.length, 1); assert.ok(messages.some(([,message])=>message.type==='REGION_CAPTURE_START'));
+});
+test('未知快捷鍵不擷取；桌面快捷鍵不依賴網頁或舊模式設定', async () => {
+  await listeners.command('unknown', activeTab); assert.equal(created.length, 0); assert.equal(captures.length, 0);
+  mock.method(chrome.storage.local, 'get', async key => { assert.notEqual(key, 'pagekitShortcutCaptureMode'); return {}; });
+  await listeners.command('capture-desktop', { incognito: true }); assert.equal(created[0].incognito, true); assert.equal(captures.length, 0);
 });
 
 test('右鍵入口保留點選的 frame，先注入再送出文字', async () => {

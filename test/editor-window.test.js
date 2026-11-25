@@ -131,3 +131,18 @@ test('導航成功後聚焦失敗不再開窗或拋出錯誤，原工作已正�
   const s = setup(); await s.open(path(first)); s.api.windows.update = async () => { throw Error('window no longer focused'); };
   await s.open(path(second)); assert.equal(s.created.length, 1); assert.match(s.windows[0].tabs[0].url, new RegExp(second));
 });
+test('桌面入口在既有視窗傳訊，不導航、不清除舊圖，關閉單窗設定才另開', async () => {
+  const s = setup(); await s.open(path(first));
+  s.api.tabs.sendMessage = async (id, message) => { s.notices.push({ id, message }); return { ready: true }; };
+  await s.open('ocr/ocr.html?desktop=1');
+  assert.equal(s.created.length, 1); assert.equal(s.navigated.length, 0); assert.match(s.windows[0].tabs[0].url, new RegExp(first));
+  assert.deepEqual(s.notices[0].message, { type: 'START_DESKTOP_CAPTURE' }); assert.deepEqual(s.discarded, []);
+  s.enabled = false; await s.open('ocr/ocr.html?desktop=1'); assert.equal(s.created.length, 2); assert.match(s.created[1].url, /desktop=1/);
+});
+test('桌面入口等初始化就緒只啟動一次；權限 API 錯誤不當成新視窗', async () => {
+  const s = setup(); await s.open(path(first)); let attempts = 0;
+  s.api.tabs.sendMessage = async () => ({ ready: ++attempts === 2 });
+  await s.open('ocr/ocr.html?desktop=1'); assert.equal(attempts, 2); assert.equal(s.created.length, 1);
+  s.api.tabs.sendMessage = async () => { throw Error('access denied'); };
+  await assert.rejects(s.open('ocr/ocr.html?desktop=1'), /access denied/); assert.equal(s.created.length, 1);
+});

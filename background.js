@@ -29,6 +29,7 @@ chrome.runtime.onInstalled.addListener(() => {
     ]) chrome.contextMenus.create({ ...menu, documentUrlPatterns: ['http://*/*', 'https://*/*'] });
     chrome.contextMenus.create({ id: 'screenshot-shortcut', title: '設定截圖快捷鍵', contexts: ['action'] });
     chrome.contextMenus.create({ id: 'import-image', title: '匯入圖片／本機去背', contexts: ['action'] });
+    chrome.contextMenus.create({ id: 'capture-desktop', title: '桌面／應用程式截圖', contexts: ['action'] });
     chrome.contextMenus.create({ id: 'support-pagekit', title: '請我喝杯咖啡（US$3／杯）', contexts: ['action'] });
   });
 });
@@ -142,6 +143,7 @@ function openShortcutSettings() {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'capture-desktop') return requestDesktopCapture(Boolean(tab?.incognito));
   if (tab?.id != null && ['capture-visible', 'capture-fullpage'].includes(info.menuItemId)) return requestPageCapture(tab, info.menuItemId === 'capture-fullpage' ? 'fullpage' : 'visible');
   if (info.menuItemId === 'support-pagekit') return chrome.tabs.create({ url: 'https://buymeacoffee.com/jasonwang0052' });
   if (info.menuItemId === 'import-image') return editorWindow('ocr/ocr.html', Boolean(tab?.incognito));
@@ -151,10 +153,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command === 'capture-desktop') return requestDesktopCapture(Boolean(tab?.incognito));
   if (command !== 'capture-region') return;
   if (tab?.id == null) [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (tab?.id != null) return requestScreenshot(tab);
 });
+
+async function requestDesktopCapture(incognito) {
+  try { return await editorWindow('ocr/ocr.html?desktop=1', incognito); }
+  catch (error) { return editorWindow(`ocr/ocr.html?error=${encodeURIComponent(error.message)}`, incognito); }
+}
 
 chrome.action.onClicked.addListener(async tab => {
   if (tab?.id == null) return;

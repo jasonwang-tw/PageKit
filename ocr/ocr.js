@@ -5,7 +5,7 @@ import { modelControls } from './model-controls.js';
 import { paddleResult } from './paddle-result.js';
 import { imageViewer } from './image-viewer.js';
 import { readCapture } from './capture-reader.js';
-import { validateCaptureSize } from '../capture-geometry.js';
+import { validateCaptureSize, CAPTURE_LIMITS } from '../capture-geometry.js';
 import { ocrTiles, findBlankRow } from './ocr-tiles.js';
 import { cutoutControls } from './cutout-controls.js';
 import { validateImportedImage, validateImageSize } from './cutout-pixels.js';
@@ -20,6 +20,8 @@ import { clipboardWrites } from './clipboard-writes.js';
 import { speechControls } from './speech-controls.js';
 import { imageCopyShortcut } from './image-copy-shortcut.js';
 import { captureSettings, singleWindowSettings } from './capture-settings.js';
+import { desktopControls } from './desktop-controls.js';
+import { captureShortcuts } from './capture-shortcuts.js';
 
 const $ = id => document.getElementById(id);
 $('version').textContent = `v${chrome.runtime.getManifest().version}`;
@@ -35,9 +37,11 @@ let abortRun = null;
 let pendingRecognition = null;
 let importing = false;
 let initialized = false;
+let desktopReady = false;
 let cutout;
 let translation;
 let speech;
+let desktop;
 let documentNeedsRecognition=false;
 let recognitionFailed = false;
 let interactionMessage = false;
@@ -45,6 +49,8 @@ let captureMode = 'region';
 let ocrRequested = false;
 let sourceRevision = 0;
 let captureCopyState = 'none';
+const manualRecognition = () => ['visible', 'fullpage', 'desktop'].includes(captureMode);
+const wholeLabel = () => captureMode === 'fullpage' ? '辨識整頁' : '辨識整張';
 const annotationLocked = () => importing || Boolean(cutout?.working);
 const clipboard = clipboardWrites({
   writeText: text => navigator.clipboard.writeText(text),
@@ -55,7 +61,13 @@ const manualCopy = () => clipboard.manualCopy();
 document.addEventListener('copy', manualCopy);
 const settings = captureSettings({ storage: chrome.storage, checkbox: $('auto-copy-screenshot'), message: $('capture-setting-status') });
 const windowSettings = singleWindowSettings({ storage: chrome.storage, checkbox: $('single-editor-window'), message: $('window-setting-status') });
-const captureError = (message, sender) => {
+const shortcutSettings = captureShortcuts({ commands: chrome.commands, region: $('region-shortcut'), desktop: $('desktop-shortcut'), opener: $('open-model-services') });
+const captureError = (message, sender, respond) => {
+  if (sender.id === chrome.runtime.id && !sender.tab && message.type === 'START_DESKTOP_CAPTURE') {
+    respond({ ready: desktopReady });
+    if (desktopReady) void desktop.begin();
+    return false;
+  }
   if (sender.id === chrome.runtime.id && !sender.tab && message.type === 'CAPTURE_ERROR' && typeof message.error === 'string') status(message.error.slice(0, 1000), true);
   return false;
 };
@@ -64,24 +76,36 @@ const widths = { stroke: 3, highlight: 20 };
 const styles = styleControls({ state: () => ({ tool: editor?.tool || 'pen', color: $('color').value, width: widths[editor?.tool === 'highlight' ? 'highlight' : 'stroke'], fontSize: Number($('text-size').value) }), locked: () => !selected || annotationLocked() || editor?.tool === 'pan' });
 const documentHistory=cropDocument({image,editor:()=>editor,setPreview:value=>cutout.setPreview(value),changed:({imageChanged})=>{
   selected={x:0,y:0,width:image.width,height:image.height};$('dimensions').textContent=`${image.width} × ${image.height}`;fitPreview();
-  if(imageChanged){sourceRevision++;captureCopyState='none';documentNeedsRecognition=captureMode !== 'fullpage';if(captureMode === 'fullpage')ocrRequested=false;palette.reset();translation.invalidate('裁切範圍已更新，辨識完成後可重新翻譯。');output.value='';$('copy').disabled=true;$('quality-note').hidden=true;scheduleRecognition();}
+  if(imageChanged){sourceRevision++;captureCopyState='none';documentNeedsRecognition=!manualRecognition();if(manualRecognition())ocrRequested=false;palette.reset();translation.invalidate('裁切範圍已更新，辨識完成後可重新翻譯。');output.value='';$('copy').disabled=true;$('quality-note').hidden=true;scheduleRecognition();}
 }});
-const crop=cropControls({source:()=>selected?image:null,preview:()=>$('screenshot'),locked:()=>busy||importing||Boolean(cutout?.working)||models.downloading,
+const crop=cropControls({source:()=>selected?image:null,preview:()=>$('screenshot'),locked:()=>busy||importing||Boolean(cutout?.working)||models.downloading||Boolean(desktop?.working),
   beforeOpen:()=>{styles.close();editor?.finishText(true);editor?.cancel();if(pendingRecognition){clearTimeout(pendingRecognition);pendingRecognition=null;documentNeedsRecognition=true;}},
-  apply:async plan=>{importing=true;setBusy(busy);try{documentHistory.apply(plan);status(captureMode === 'fullpage' ? '裁切完成，標註可繼續編輯；請重新框選文字區或辨識整頁。' : '裁切完成，標註可繼續編輯；正在準備重新辨識。');}finally{importing=false;setBusy(busy);}},
+  apply:async plan=>{importing=true;setBusy(busy);try{documentHistory.apply(plan);status(manualRecognition() ? `裁切完成，標註可繼續編輯；請重新框選文字區或按「${wholeLabel()}」。` : '裁切完成，標註可繼續編輯；正在準備重新辨識。');}finally{importing=false;setBusy(busy);}},
   afterClose:()=>{if(documentNeedsRecognition)scheduleRecognition();}});
 const management = modelServices();
-const palette = paletteControls({ source: () => selected ? image : null, locked: () => busy || importing || Boolean(cutout?.working), copyText: text => clipboard.copyText(text), beforeOpen: () => { editor?.finishText(true); editor?.cancel(); } });
-const models = modelControls({ locked: () => busy || importing || Boolean(cutout?.working), changed: () => { setBusy(busy); scheduleRecognition(); }, activityChanged: () => setBusy(busy), openManagement: management.open });
-cutout = cutoutControls({ source: () => image, editor: () => editor, locked: () => busy || importing || models.downloading, changed: () => setBusy(busy), openManagement: management.open });
+const palette = paletteControls({ source: () => selected ? image : null, locked: () => busy || importing || Boolean(cutout?.working) || Boolean(desktop?.working), copyText: text => clipboard.copyText(text), beforeOpen: () => { editor?.finishText(true); editor?.cancel(); } });
+const models = modelControls({ locked: () => busy || importing || Boolean(cutout?.working) || Boolean(desktop?.working), changed: () => { setBusy(busy); scheduleRecognition(); }, activityChanged: () => setBusy(busy), openManagement: management.open });
+cutout = cutoutControls({ source: () => image, editor: () => editor, locked: () => busy || importing || models.downloading || Boolean(desktop?.working), changed: () => setBusy(busy), openManagement: management.open });
 translation = translationControls({ source: output, locked: () => busy || importing, copyText: text => clipboard.copyText(text), changed: () => speech?.render() });
 speech = speechControls({ source: output, translated: $('translated-text'), target: $('translation-language'), locked: () => busy || importing });
 const viewer = imageViewer({ image, editor: () => editor, selected: () => selected, locked: () => annotationLocked() || crop.isOpen,
   status, choose: rect => { if (busy) return; selected = rect; ocrRequested = true; void recognize(); } });
+desktop = desktopControls({ api: chrome,
+  controls: { grant: $('enable-desktop-capture'), revoke: $('remove-desktop-capture'), start: $('capture-desktop'), cancel: $('cancel-desktop-capture'), message: $('desktop-capture-status') },
+  locked: () => !desktopReady || busy || importing || cutout.working || models.downloading || crop.isOpen || palette.isOpen,
+  changed: () => { clearTimeout(pendingRecognition); pendingRecognition = null; setBusy(busy); },
+  notify: status,
+  openManagement: () => management.open('desktop'), revision: () => clipboard.revision,
+  accept: async (blob, revision, signal) => {
+    await importImage(blob, false, { revision, signal });
+    if ($('model-services-dialog').open) $('model-services-dialog').close();
+  }
+});
 function fitPreview() { viewer.layout(); }
 $('select-ocr-region').addEventListener('click', () => viewer.arm());
 $('recognize-page').addEventListener('click', () => { viewer.cancel(); selected = { x: 0, y: 0, width: image.width, height: image.height }; ocrRequested = true; void recognize(); });
 $('stop-recognition').addEventListener('click', () => abortRun?.());
+$('retry-recognition').addEventListener('click', () => { if (!$('retry-recognition').disabled) { viewer.cancel(); void recognize(); } });
 
 function status(text, error = false) {
   if (busy) interactionMessage = true;
@@ -98,7 +122,7 @@ function recognitionStatus(text, error = false, final = false) {
 }
 function renderRecognitionState() {
   const state = $('recognition-state');
-  state.textContent = recognitionFailed ? '需確認' : busy ? '辨識中…' : output.value ? '已辨識' : selected ? captureMode === 'fullpage' && !ocrRequested ? '待框選' : '未辨識到文字' : '等待圖片';
+  state.textContent = recognitionFailed ? '需確認' : busy ? '辨識中…' : output.value ? '已辨識' : selected ? manualRecognition() && !ocrRequested ? '待框選' : '未辨識到文字' : '等待圖片';
   state.classList.toggle('complete', !busy && Boolean(output.value) && !recognitionFailed);
 }
 function updateControls(message) {
@@ -111,7 +135,7 @@ function updateControls(message) {
 }
 function setBusy(value) {
   busy = value;
-  const locked = value || importing || cutout?.working;
+  const locked = value || importing || cutout?.working || desktop?.working;
   const editingLocked = annotationLocked();
   renderRecognitionState();
   const enhanced = models.engine === 'enhanced';
@@ -124,10 +148,15 @@ function setBusy(value) {
   styles.render();
   crop.render();
   viewer.render();
-  $('fullpage-ocr-controls').hidden = captureMode !== 'fullpage';
-  output.placeholder = captureMode === 'fullpage' ? '請框選文字區，或按「辨識整頁」。\n按「複製文字」才複製結果。' : '截圖載入後自動辨識。\n按「複製文字」才複製結果。';
+  desktop?.render();
+  $('fullpage-ocr-controls').hidden = !manualRecognition();
+  $('manual-ocr-description').textContent = `保留原始像素供編輯。可框選文字區辨識，或按「${wholeLabel()}」；縮放不會重新辨識。`;
+  $('recognize-page').textContent = wholeLabel();
+  output.placeholder = manualRecognition() ? `請框選文字區，或按「${wholeLabel()}」。\n按「複製文字」才複製結果。` : '截圖載入後自動辨識。\n按「複製文字」才複製結果。';
   for (const id of ['select-ocr-region', 'recognize-page']) $(id).disabled = locked || !selected || models.downloading || crop.isOpen;
   $('stop-recognition').hidden = !value;
+  $('retry-recognition').hidden = value || !selected || !ocrRequested;
+  $('retry-recognition').disabled = locked || !selected || models.downloading || crop.isOpen;
   $('language').disabled = value || enhanced;
   $('upscale').disabled = value;
   $('layout').disabled = value;
@@ -150,7 +179,8 @@ function setBusy(value) {
   updateControls();
 }
 async function recognize() {
-  if (!selected || busy || importing || cutout.working || models.downloading || crop.isOpen) return;
+  if (!selected || busy || importing || cutout.working || models.downloading || desktop?.working || crop.isOpen) return;
+  clearTimeout(pendingRecognition); pendingRecognition = null;
   documentNeedsRecognition=false;
   ocrRequested = true;
   translation.invalidate('OCR 更新後，請手動按「翻譯」。');
@@ -292,7 +322,8 @@ async function copyResult() {
 $('copy').addEventListener('click', () => { void copyResult(); });
 
 function scheduleRecognition() {
-  if (captureMode === 'fullpage' && !ocrRequested) return;
+  if (manualRecognition() && !ocrRequested) return;
+  if (desktop?.working) return;
   if (!selected || busy || importing || cutout.working || crop.isOpen) return;
   clearTimeout(pendingRecognition);
   status('設定已變更，即將自動重新辨識…');
@@ -357,11 +388,10 @@ function imageBlob() {
   editor?.finishText(true);
   return new Promise((resolve, reject) => $('screenshot').toBlob(blob => blob ? resolve(blob) : reject(new Error('圖片產生失敗')), 'image/png'));
 }
-async function copyScreenshotAutomatically() {
+async function copyScreenshotAutomatically(automaticRevision = clipboard.revision) {
   if (!settings.enabled) return;
   const source = sourceRevision, preference = settings.revision;
   const isCurrent = () => source === sourceRevision && settings.enabled && preference === settings.revision;
-  const automaticRevision = clipboard.revision;
   captureCopyState = 'pending';
   // Read the original image directly: do not finish/cancel a concurrent text draft.
   const snapshot = new Promise((resolve, reject) => image.toBlob(blob => blob ? resolve(blob) : reject(new Error('圖片產生失敗')), 'image/png'));
@@ -370,8 +400,8 @@ async function copyScreenshotAutomatically() {
     if (!isCurrent()) return;
     if (automaticRevision !== clipboard.revision) { captureCopyState = 'superseded'; return; }
     captureCopyState = copied ? 'copied' : 'superseded';
-    if (copied) status(captureMode === 'fullpage'
-      ? '截圖已自動複製，可直接貼上；請框選文字區，或按「辨識整頁」。'
+    if (copied) status(manualRecognition()
+      ? `截圖已自動複製，可直接貼上；請框選文字區，或按「${wholeLabel()}」。`
       : '截圖已自動複製，可直接貼上；OCR 文字需按「複製文字」才複製。');
   } catch {
     if (!isCurrent()) return;
@@ -403,36 +433,48 @@ $('save-image').addEventListener('click', async () => {
     status('已開始下載 PNG，包含目前標註');
   } catch (error) { status(error.message, true); }
 });
-$('shortcuts').addEventListener('click', async () => {
+async function openCaptureShortcuts() {
   try {
     const response = await chrome.runtime.sendMessage({ type: 'OPEN_SHORTCUT_SETTINGS' });
     if (!response?.success) throw new Error(response?.error || '無法開啟設定');
   } catch { status('請在 chrome://extensions/shortcuts（Edge：edge://extensions/shortcuts）設定快捷鍵', true); }
-});
+}
+$('manage-capture-shortcuts').addEventListener('click', openCaptureShortcuts);
 $('import-image').addEventListener('click', () => $('image-file').click());
-const imageImportLocked = () => busy || importing || cutout.working || models.downloading || !initialized;
-async function importImage(file, pasted = false) {
-  if (!file || imageImportLocked()) return;
-  sourceRevision++; captureCopyState = 'none';
-  let bitmap, loaded = false;
+const imageImportLocked = () => busy || importing || cutout.working || models.downloading || desktop?.working || !initialized;
+async function importImage(file, pasted = false, desktopCapture = null) {
+  if (!file || (!desktopCapture && imageImportLocked())) return;
+  let bitmap, prepared, loaded = false;
   try {
-    validateImportedImage(file);
+    if (desktopCapture) {
+      if (file.type !== 'image/png' || file.size <= 0 || file.size > CAPTURE_LIMITS.bytes) throw new Error('桌面截圖 PNG 無效或超過安全上限');
+    } else validateImportedImage(file);
     importing = true; clearTimeout(pendingRecognition); pendingRecognition = null; setBusy(busy);
     bitmap = await createImageBitmap(file);
-    validateImageSize(bitmap.width, bitmap.height);
+    (desktopCapture ? validateCaptureSize : validateImageSize)(bitmap.width, bitmap.height);
+    if (desktopCapture?.signal.aborted) throw new DOMException('已取消桌面截圖', 'AbortError');
+    // Allocate/draw before clearing the old document; a canvas allocation or
+    // decode failure must leave its annotations and undo history intact.
+    prepared = document.createElement('canvas'); prepared.width = bitmap.width; prepared.height = bitmap.height;
+    const preparedContext = prepared.getContext('2d');
+    if (!preparedContext) throw new Error('圖片記憶體不足，請選擇較小的視窗');
+    preparedContext.drawImage(bitmap, 0, 0); preparedContext.getImageData(0, 0, 1, 1);
+    sourceRevision++; captureCopyState = 'none';
     // Decoding/validation must finish before replacing the current image.
     translation.invalidate('已匯入新圖片，辨識完成後可手動翻譯。');
     crop.reset();palette.reset(); cutout.reset(); editor?.destroy();documentHistory.reset();documentNeedsRecognition=false;
-    captureMode = 'region'; ocrRequested = false; viewer.cancel();
+    captureMode = desktopCapture ? 'desktop' : 'region'; ocrRequested = false; viewer.cancel();
+    recognitionFailed = false;
     image.width = bitmap.width; image.height = bitmap.height;
-    image.getContext('2d').drawImage(bitmap, 0, 0);
+    image.getContext('2d').drawImage(prepared, 0, 0);
     selected = { x: 0, y: 0, width: image.width, height: image.height };
     attachEditor(); loaded = true;
     output.value = ''; $('quality-note').hidden = true;
-    status(pasted ? '已貼上新圖片並取代原圖，正在自動辨識。' : '圖片已匯入，正在自動辨識；完成後可使用去背。');
-  } catch (error) { status(error.message || '圖片無法開啟，請選擇有效圖片', true); }
-  finally { bitmap?.close(); importing = false; setBusy(busy); }
-  if (loaded) await recognize();
+    status(desktopCapture ? '桌面截圖已載入，請框選文字區或按「辨識整張」。' : pasted ? '已貼上新圖片並取代原圖，正在自動辨識。' : '圖片已匯入，正在自動辨識；完成後可使用去背。');
+  } catch (error) { if (desktopCapture) throw error; status(error.message || '圖片無法開啟，請選擇有效圖片', true); }
+  finally { bitmap?.close(); if (prepared) prepared.width = prepared.height = 0; importing = false; setBusy(busy); }
+  if (loaded && desktopCapture) void copyScreenshotAutomatically(desktopCapture.revision);
+  else if (loaded) await recognize();
 }
 $('image-file').addEventListener('change', () => {
   const file = $('image-file').files[0]; $('image-file').value = '';
@@ -453,7 +495,7 @@ function attachEditor() {
   editor = new AnnotationEditor($('screenshot'), image, updateControls,documentHistory);
   // Annotation history is safe during OCR; crossing a crop boundary changes
   // source pixels and must wait until the current recognition run finishes.
-  editor.historyAllowed = snapshot => !busy || !snapshot.document || snapshot.document.steps === documentHistory.capture().steps;
+  editor.historyAllowed = snapshot => !(busy || desktop?.working) || !snapshot.document || snapshot.document.steps === documentHistory.capture().steps;
   editor.color = $('color').value; editor.fontSize = Number($('text-size').value);
   editor.tool = document.querySelector('[data-tool][aria-pressed="true"]')?.dataset.tool || 'pen';
   syncStrokeControl();
@@ -461,14 +503,13 @@ function attachEditor() {
   $('dimensions').textContent = `${image.width} × ${image.height}`;
   viewer.reset(captureMode === 'fullpage'); setBusy(busy);
 }
-chrome.commands.getAll().then(commands => {
-  const shortcut = commands.find(command => command.name === 'capture-region')?.shortcut;
-  $('shortcuts').textContent = shortcut ? `快捷鍵：${shortcut}` : '設定截圖快捷鍵';
-}).catch(() => {});
 window.addEventListener('pagehide', () => {
+  desktopReady = false;
   sourceRevision++;
   settings.destroy();
   windowSettings.destroy();
+  shortcutSettings.destroy();
+  desktop.destroy();
   chrome.runtime.onMessage.removeListener(captureError);
   document.removeEventListener('copy', manualCopy);
   copyShortcut.destroy();
@@ -493,14 +534,20 @@ window.addEventListener('pagehide', () => {
 });
 
 async function load() {
-  await Promise.all([models.initialize(), cutout.initialize(), settings.initialize(), windowSettings.initialize()]);
+  await Promise.all([models.initialize(), cutout.initialize(), settings.initialize(), windowSettings.initialize(), desktop.initialize(), shortcutSettings.initialize()]);
   initialized = true;
   setBusy(false);
-  const error = new URLSearchParams(location.search).get('error');
-  if (error) { status(error, true); return; }
+  const params = new URLSearchParams(location.search);
+  const error = params.get('error');
+  if (error) { desktopReady = true; setBusy(false); status(error, true); return; }
   const id = location.hash.slice(1);
   history.replaceState(null, '', location.pathname);
-  if (!id) { status('請匯入本機圖片，或回到網頁使用截圖／圖片右鍵。'); return; }
+  if (!id) {
+    desktopReady = true; setBusy(false);
+    if (params.get('desktop') === '1') await desktop.begin();
+    else status('請匯入本機圖片，或回到網頁使用截圖／圖片右鍵。');
+    return;
+  }
   if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('截圖識別無效，請重新截圖或匯入圖片');
   const key = `ocr:${id}`;
   const { [key]: job } = await chrome.storage.session.get(key);
@@ -531,8 +578,9 @@ async function load() {
     selected = { x: 0, y: 0, width: image.width, height: image.height };
     attachEditor();
   } finally { importing = false; setBusy(false); }
+  desktopReady = true; setBusy(false);
   void copyScreenshotAutomatically();
-  if (captureMode === 'fullpage') status('整頁截圖已載入，保留原始像素；請框選文字區辨識，或選「辨識整頁」。');
+  if (manualRecognition()) status(`截圖已載入，保留原始像素；需要文字時請框選辨識，或按「${wholeLabel()}」。`);
   else await recognize();
 }
-load().catch(error => { recognitionStatus(error.message || '截圖載入失敗，請重新截圖', true, true); });
+load().catch(error => { desktopReady = initialized; setBusy(false); recognitionStatus(error.message || '截圖載入失敗，請重新截圖', true, true); });

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "頁匣 PageKit",
   "short_name": "PageKit",
-  "version": "1.15.0",
+  "version": "1.17.2",
   "description": "頁匣 PageKit：瀏覽器效率工具箱，提供即時翻譯、截圖標註、圖片文字辨識與複製。",
   "permissions": [
     "activeTab",
@@ -14,6 +14,7 @@
   "host_permissions": [
     "https://translate.google.com/*"
   ],
+  "optional_permissions": ["desktopCapture"],
   "optional_host_permissions": [
     "https://paddle-model-ecology.bj.bcebos.com/*",
     "https://huggingface.co/*",
@@ -70,7 +71,11 @@
       "suggested_key": {
         "default": "Alt+Shift+S"
       },
-      "description": "框選截圖並開啟標註／OCR 彈窗"
+      "description": "網頁框選截圖與標註／OCR"
+    },
+    "capture-desktop": {
+      "description": "桌面／應用程式截圖與標註／OCR",
+      "global": true
     }
   }
 }

@@ -19,10 +19,15 @@ for (const [size, path] of Object.entries(manifest.icons)) {
   assert.equal(png.readUInt32BE(20), Number(size), `圖示高度不符：${path}`);
 }
 assert.deepEqual(manifest.permissions.slice().sort(), ['activeTab', 'clipboardWrite', 'contextMenus', 'scripting', 'storage']);
+assert.deepEqual(manifest.optional_permissions, ['desktopCapture']);
+for (const path of ['ocr/desktop-controls.js', 'ocr/desktop-frame.js']) assert.ok(existsSync(resolve(root, path)));
 assert.deepEqual(manifest.host_permissions, ['https://translate.google.com/*']);
 assert.deepEqual(manifest.optional_host_permissions, ['https://paddle-model-ecology.bj.bcebos.com/*', 'https://huggingface.co/*', 'https://us.aws.cdn.hf.co/*']);
 assert.ok(!manifest.side_panel && !manifest.options_page);
 assert.equal(manifest.commands['capture-region'].suggested_key.default, 'Alt+Shift+S');
+assert.equal(manifest.commands['capture-desktop'].global, true);
+assert.ok(!manifest.commands['capture-desktop'].suggested_key, '第二組快捷鍵由使用者指定，不占用既有按鍵');
+assert.ok(existsSync(resolve(root, 'ocr/capture-shortcuts.js')));
 for (const path of [manifest.background.service_worker, ...Object.values(manifest.icons), ...manifest.content_scripts.flatMap(item => item.js), 'content/screenshot-region.js', 'ocr/annotation-editor.js', 'ocr/recognition.js', 'ocr/text-layout.js', 'ocr/cjk-recovery.js', 'ocr/diagram-recognition.js', 'ocr/ocr.html', 'ocr/ocr.js', 'ocr/ocr.css']) {
   assert.ok(existsSync(resolve(root, path)), `manifest 路徑不存在：${path}`);
 }
