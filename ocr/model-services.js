@@ -10,7 +10,10 @@ export function modelServices() {
     // of relying on autofocus while the dialog is still visually hidden.
     frame = requestAnimationFrame(() => {
       if (!dialog.open) return;
-      const button = section === 'ocr' || section === 'cutout'
+      const permissionButton = document.getElementById('enable-desktop-capture');
+      const button = section === 'desktop'
+        ? (permissionButton.hidden ? document.getElementById('capture-desktop') : permissionButton)
+        : section === 'ocr' || section === 'cutout'
         ? document.getElementById(section === 'ocr' ? 'download-model' : 'download-cutout-model')
         : dialog.querySelector('[autofocus]');
       button.scrollIntoView({ block: 'nearest' }); button.focus({ preventScroll: true });

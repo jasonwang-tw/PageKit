@@ -24,6 +24,21 @@ export function editorWindows(api, { discard = async () => {} } = {}) {
     const existing = preferences[SINGLE_EDITOR_WINDOW_KEY] !== false ? await find(incognito) : null;
     if (existing) {
       const tab = existing.tabs[0];
+      if (url.searchParams.get('desktop') === '1') {
+        await focus(existing);
+        // An existing popup can still be initializing after a preceding capture.
+        // Retry only until it accepts, never after a picker has been launched.
+        for (let attempt = 0; attempt < 25; attempt++) {
+          try {
+            const response = await api.tabs.sendMessage(tab.id, { type: 'START_DESKTOP_CAPTURE' });
+            if (response?.ready) return existing;
+          } catch (error) {
+            if (!/receiving end does not exist|could not establish connection|message port closed/i.test(error.message)) throw error;
+          }
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        throw new Error('編輯視窗尚未就緒，請稍後再啟動桌面截圖');
+      }
       if (url.searchParams.has('error')) {
         await api.tabs.sendMessage(tab.id, { type: 'CAPTURE_ERROR', error: url.searchParams.get('error') });
         await focus(existing);
